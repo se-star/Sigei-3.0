@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
+  ChevronRight,
   Bell,
   Cake,
   CalendarDays,
@@ -14,7 +15,8 @@ import {
   UsersRound,
   Network,
 } from 'lucide-react';
-import { Avatar, Boton, Esqueleto, Insignia, Tarjeta } from '@/components/ui';
+import { Avatar, Esqueleto, Insignia, Tarjeta } from '@/components/ui';
+import { BusquedaPildora } from '@/components/layout/Shell';
 import { useAuth } from '@/hooks/useAuth';
 import { useAjustes, useTabla } from '@/hooks/useDatos';
 import { DIAS, etiqueta, PRIORIDADES, tono, TIPOS_EVENTO, TIPOS_NOVEDAD } from '@/lib/catalogos';
@@ -40,7 +42,7 @@ function saludo() {
 }
 
 export default function Inicio() {
-  const { perfil, editar } = useAuth();
+  const { perfil } = useAuth();
   const ajustes = useAjustes();
   const { data: docentes, isLoading } = useTabla('docentes');
   const { data: grupos = [] } = useTabla('grupos');
@@ -102,48 +104,44 @@ export default function Inicio() {
   const maxArea = Math.max(1, ...cargaPorArea.map((x) => x.horas));
 
   const primerNombre = perfil?.nombre.split(' ')[0] ?? '';
+  const accesos = [
+    { to: '/novedades?nueva=1', texto: directivo ? 'Registrar novedad' : 'Solicitar permiso', icono: Plus },
+    { to: perfil?.docente_id ? '/horarios?mio=1' : '/horarios', texto: perfil?.docente_id ? 'Mi horario' : 'Horarios', icono: Clock3 },
+    { to: '/calendario', texto: 'Calendario', icono: CalendarDays },
+    { to: '/comunicados', texto: 'Comunicados', icono: Megaphone },
+    ...(directivo ? [{ to: '/docentes', texto: 'Docentes', icono: UsersRound }] : []),
+    ...(directivo ? [] : [{ to: '/tareas', texto: 'Tareas', icono: ListTodo }]),
+  ];
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Bienvenida */}
-      <section className="anim-rise relative overflow-hidden rounded-3xl bg-[#0d2b28] px-6 py-7 text-white sm:px-8 dark:bg-[#0f2a27]">
-        <div
-          aria-hidden
-          className="absolute -right-24 -bottom-32 size-80 rounded-full opacity-30 blur-3xl"
-          style={{ background: 'radial-gradient(circle, #bef264, transparent 65%)' }}
-        />
-        <div className="relative flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-sm font-medium text-lime">{fechaDia(hoy)}</p>
-            <h1 className="mt-1 text-3xl font-extrabold sm:text-4xl">
-              {saludo()}, {primerNombre}
-            </h1>
-            <p className="mt-2 max-w-xl text-white/70">
-              {ajustes.institucion} · Año lectivo {ajustes.anio_lectivo}
-              {ausentes.length > 0 && (
-                <>
-                  {' '}
-                  · <strong className="text-white">{ausentes.length}</strong>{' '}
-                  {ausentes.length === 1 ? 'docente ausente hoy' : 'docentes ausentes hoy'}
-                </>
-              )}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link to="/novedades?nueva=1">
-              <Boton variante="lima" icono={<Plus className="size-4" />}>
-                Registrar novedad
-              </Boton>
-            </Link>
-            {editar('calendario') && (
-              <Link to="/calendario?nuevo=1">
-                <Boton variante="secundario" className="border-white/15 bg-white/10 text-white hover:bg-white/20" icono={<CalendarDays className="size-4" />}>
-                  Nuevo evento
-                </Boton>
-              </Link>
-            )}
-          </div>
+    <div className="flex flex-col gap-10">
+      {/* Bienvenida: saludo centrado, búsqueda en píldora y accesos rápidos */}
+      <section className="anim-rise flex flex-col items-center px-2 pt-6 pb-4 text-center sm:pt-10">
+        <p className="text-[15px] text-muted">{fechaDia(hoy)}</p>
+        <h1 className="mt-2 text-[40px] font-semibold sm:text-[56px]">
+          {saludo()}, {primerNombre}
+        </h1>
+        <p className="mt-3 max-w-xl text-[16px] text-ink-2">
+          {ajustes.institucion} · Año lectivo {ajustes.anio_lectivo}
+          {ausentes.length > 0 && ` · ${ausentes.length} ${ausentes.length === 1 ? 'docente ausente hoy' : 'docentes ausentes hoy'}`}
+        </p>
+        <div className="mt-7 flex w-full justify-center">
+          <BusquedaPildora grande onAbrir={() => window.dispatchEvent(new Event('sigei:buscar'))} />
         </div>
+        <nav className="mt-5 flex max-w-3xl flex-wrap justify-center gap-2" aria-label="Accesos rápidos">
+          {accesos.map((x) => (
+            <Link
+              key={x.to}
+              to={x.to}
+              className="flex items-center gap-2 rounded-full border border-line bg-surface py-1.5 pr-4 pl-1.5 text-[15px] shadow-chip transition hover:shadow-pop"
+            >
+              <span className="grid size-7 place-items-center rounded-full bg-surface-2">
+                <x.icono className="size-4" strokeWidth={1.75} />
+              </span>
+              {x.texto}
+            </Link>
+          ))}
+        </nav>
       </section>
 
       {/* Indicadores */}
@@ -201,11 +199,13 @@ export default function Inicio() {
                           {etiqueta(TIPOS_NOVEDAD, n.tipo)} · hasta {fechaCorta(n.fecha_fin)}
                         </p>
                       </div>
-                      {r ? (
-                        <Insignia tono="ok">Reemplazo: {nombreDocente(r, true)}</Insignia>
-                      ) : (
-                        <Insignia tono="warn">Sin reemplazo</Insignia>
-                      )}
+                      <div className="basis-full pl-12 sm:basis-auto sm:pl-0">
+                        {r ? (
+                          <Insignia tono="ok">Reemplazo: {nombreDocente(r, true)}</Insignia>
+                        ) : (
+                          <Insignia tono="warn">Sin reemplazo</Insignia>
+                        )}
+                      </div>
                     </li>
                   );
                 })}
@@ -229,8 +229,8 @@ export default function Inicio() {
                             e.fecha_inicio === hoy ? 'bg-lime text-lime-ink' : 'bg-surface-2',
                           )}
                         >
-                          <span className="text-[10px] font-bold uppercase">{DIAS[(f.getDay() + 6) % 7]?.corto ?? 'Dom'}</span>
-                          <span className="font-display text-lg leading-none font-bold">{f.getDate()}</span>
+                          <span className="text-[10px] font-semibold uppercase">{DIAS[(f.getDay() + 6) % 7]?.corto ?? 'Dom'}</span>
+                          <span className="font-display text-lg leading-none font-semibold">{f.getDate()}</span>
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-semibold">{e.titulo}</p>
@@ -276,7 +276,7 @@ export default function Inicio() {
             ) : (
               <ul className="flex flex-col gap-4">
                 {avisos.map((c) => (
-                  <li key={c.id} className="border-l-2 pl-3" style={{ borderColor: c.prioridad === 'alta' ? 'var(--danger)' : 'var(--line-strong)' }}>
+                  <li key={c.id} className="border-l-2 pl-3" style={{ borderColor: c.prioridad === 'alta' ? 'var(--ink)' : 'var(--line)' }}>
                     <p className="flex items-center gap-1.5 font-semibold">
                       {c.fijado && <Pin className="size-3.5 text-brand" />}
                       {c.titulo}
@@ -364,8 +364,8 @@ function Indicador({
     <Link
       to={to}
       className={cx(
-        'card group flex flex-col gap-3 p-4 transition hover:-translate-y-0.5 hover:border-brand/40 sm:p-5',
-        resaltar && 'border-warn/40 bg-warn-soft/40',
+        'card group flex flex-col gap-3 p-5 transition hover:-translate-y-0.5 hover:shadow-pop sm:p-6',
+        resaltar && 'bg-warn-soft/70',
       )}
     >
       <div className="flex items-center justify-between">
@@ -377,7 +377,7 @@ function Indicador({
       {cargando ? (
         <Esqueleto className="h-9 w-16" />
       ) : (
-        <p className="font-display text-3xl leading-none font-extrabold tabular-nums sm:text-4xl">{valor}</p>
+        <p className="font-display text-3xl leading-none font-semibold tabular-nums sm:text-4xl">{valor}</p>
       )}
       <div>
         <p className="text-sm font-semibold">{etiqueta}</p>
@@ -389,8 +389,8 @@ function Indicador({
 
 function VerTodo({ to }: { to: string }) {
   return (
-    <Link to={to} className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
-      Ver todo <ArrowRight className="size-3" />
+    <Link to={to} className="flex items-center gap-0.5 rounded-full py-1 pr-1 pl-3 text-[13px] text-muted transition hover:bg-surface-2 hover:text-ink">
+      Ver todo <ChevronRight className="size-4" />
     </Link>
   );
 }

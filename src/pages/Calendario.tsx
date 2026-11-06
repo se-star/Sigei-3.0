@@ -17,7 +17,7 @@ const COLOR_TIPO: Record<TipoEvento, string> = {
   deportivo: 'var(--warn)',
   reunion: 'var(--ink-2)',
   festivo: 'var(--danger)',
-  otro: 'var(--lime-ink)',
+  otro: 'var(--muted)',
 };
 
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -132,7 +132,7 @@ export default function Calendario() {
           );
         })}
         {tipos.length > 0 && (
-          <button onClick={() => setTipos([])} className="px-2 text-xs font-semibold text-brand hover:underline">
+          <button onClick={() => setTipos([])} className="px-2 text-xs text-ink underline underline-offset-2">
             Ver todos
           </button>
         )}
@@ -141,7 +141,7 @@ export default function Calendario() {
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <section className="card overflow-hidden">
           <header className="flex items-center gap-2 border-b border-line px-5 py-3.5">
-            <h2 className="flex-1 font-display text-xl font-bold">
+            <h2 className="flex-1 font-display text-xl font-semibold">
               {MESES[cursor.m]} <span className="text-muted">{cursor.y}</span>
             </h2>
             <Boton variante="secundario" tam="sm" onClick={irHoy}>
@@ -156,7 +156,7 @@ export default function Calendario() {
           </header>
           <div className="grid grid-cols-7 border-b border-line bg-surface-2/50">
             {[...DIAS, { valor: 7, corto: 'Dom', largo: 'Domingo' }].map((d) => (
-              <div key={d.valor} className="py-2 text-center text-[11px] font-bold tracking-wider text-muted uppercase">
+              <div key={d.valor} className="py-2 text-center text-[11px] font-semibold tracking-wider text-muted uppercase">
                 {d.corto}
               </div>
             ))}
@@ -229,7 +229,7 @@ export default function Calendario() {
                   <button
                     onClick={() => setForm({ abierto: true, evento: e })}
                     disabled={!puede}
-                    className="w-full rounded-xl border border-line p-3.5 text-left transition enabled:hover:border-brand/40"
+                    className="w-full rounded-xl border border-line p-3.5 text-left transition enabled:hover:shadow-pop"
                     style={{ borderLeft: `4px solid ${COLOR_TIPO[e.tipo]}` }}
                   >
                     <div className="flex items-start justify-between gap-2">

@@ -67,7 +67,7 @@ export default function Actividad() {
         <div className="flex flex-col gap-6">
           {Object.entries(porDia).map(([dia, items]) => (
             <section key={dia}>
-              <h2 className="mb-2 text-sm font-bold text-muted">{fechaDia(dia)}</h2>
+              <h2 className="mb-2 text-sm font-semibold text-muted">{fechaDia(dia)}</h2>
               <ul className="card divide-y divide-line">
                 {items.map((a) => {
                   const ac = ACCION[a.accion] ?? ACCION.editar;

@@ -97,7 +97,7 @@ export default function Grupos() {
             if (!delNivel.length) return null;
             return (
               <section key={nivel.valor}>
-                <h2 className="mb-3 flex items-center gap-2 text-lg font-bold">
+                <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold">
                   {nivel.etiqueta}
                   <Insignia tono={nivel.tono}>{delNivel.length}</Insignia>
                 </h2>
@@ -108,7 +108,7 @@ export default function Grupos() {
                       <article key={gr.id} className="card flex flex-col">
                         <header className="flex items-center justify-between gap-2 border-b border-line px-5 py-3.5">
                           <div>
-                            <h3 className="font-display text-base font-bold">{gr.nombre}</h3>
+                            <h3 className="font-display text-base font-semibold">{gr.nombre}</h3>
                             <p className="text-xs text-muted">
                               {hijos.length} {hijos.length === 1 ? 'grupo' : 'grupos'} · {hijos.reduce((s, g) => s + g.estudiantes, 0)} estudiantes
                             </p>
@@ -135,7 +135,7 @@ export default function Grupos() {
                               const dir = g.director_id ? docs.get(g.director_id) : undefined;
                               return (
                                 <li key={g.id} className="group flex items-center gap-3 px-5 py-3">
-                                  <span className="grid h-10 min-w-12 place-items-center rounded-xl bg-brand-soft px-2 font-display font-bold text-brand-soft-ink">
+                                  <span className="grid h-10 min-w-12 place-items-center rounded-xl bg-brand-soft px-2 font-display font-semibold text-brand-soft-ink">
                                     {g.nombre}
                                   </span>
                                   <div className="min-w-0 flex-1">

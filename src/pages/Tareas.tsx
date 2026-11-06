@@ -78,10 +78,10 @@ export default function Tareas() {
                 setArrastrando(null);
                 setSobre(null);
               }}
-              className={cx('flex min-h-64 flex-col rounded-2xl bg-surface-2/70 p-3 transition', sobre === estado && 'bg-brand-soft ring-2 ring-brand/40')}
+              className={cx('flex min-h-64 flex-col rounded-[28px] bg-surface-3/50 p-3 transition', sobre === estado && 'bg-surface-3 ring-2 ring-accent/30')}
             >
               <header className="mb-3 flex items-center justify-between px-1.5">
-                <h2 className="flex items-center gap-2 font-display font-bold">
+                <h2 className="flex items-center gap-2 font-display font-semibold">
                   <Insignia tono={tono(ESTADOS_TAREA, estado)} punto>
                     {etiqueta(ESTADOS_TAREA, estado)}
                   </Insignia>

@@ -247,12 +247,12 @@ export default function Docentes() {
               <button
                 key={d.id}
                 onClick={() => nav(`/docentes/${d.id}`)}
-                className="card group flex flex-col gap-4 p-5 text-left transition hover:-translate-y-0.5 hover:border-brand/40"
+                className="card group flex flex-col gap-4 p-5 text-left transition hover:-translate-y-0.5 hover:shadow-pop"
               >
                 <div className="flex items-start gap-3">
                   <Avatar nombre={nombreDocente(d)} tam={48} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-display text-base font-bold">{nombreDocente(d)}</p>
+                    <p className="truncate font-display text-base font-semibold">{nombreDocente(d)}</p>
                     <p className="truncate text-sm text-muted">{d.cargo}</p>
                   </div>
                   <Insignia tono={tono(ESTADOS_DOCENTE, d.estado)} punto>

@@ -2,7 +2,9 @@
 
 **Sistema de Gestión Educativa Institucional.** Una plataforma web para organizar el día a día de un colegio: docentes, grupos, asignación académica, horarios, novedades del personal, seguimiento pedagógico, calendario y comunicación institucional.
 
-Esta versión se construyó desde cero, con un diseño nuevo, modo oscuro y uso cómodo desde el celular.
+Esta versión se construyó desde cero, con modo oscuro y uso cómodo desde el celular.
+
+**Diseño:** lienzo gris claro con tarjetas blancas que flotan sobre sombras suaves (radio de 28 px), controles en píldora, tipografía Inter con tracking negativo y sin negritas pesadas, acción primaria en negro y un único acento violeta (`#5433eb`) reservado al logotipo y a la búsqueda. Los tokens están en `src/index.css`.
 
 ---
 

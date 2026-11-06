@@ -81,7 +81,7 @@ export default function Seguimiento() {
         <div className="mb-6 grid gap-4 lg:grid-cols-3">
           <div className="card flex flex-col justify-between p-5">
             <p className="text-sm font-semibold text-muted">Cobertura del acompañamiento</p>
-            <p className="mt-2 font-display text-4xl font-extrabold tabular-nums">
+            <p className="mt-2 font-display text-4xl font-semibold tabular-nums">
               {acompanados}
               <span className="text-xl text-muted"> / {activos}</span>
             </p>
@@ -144,7 +144,7 @@ export default function Seguimiento() {
             const d = docs.get(s.docente_id);
             const p = promedio(s);
             return (
-              <button key={s.id} onClick={() => setDetalle(s)} className="card flex flex-col gap-4 p-5 text-left transition hover:-translate-y-0.5 hover:border-brand/40">
+              <button key={s.id} onClick={() => setDetalle(s)} className="card flex flex-col gap-4 p-5 text-left transition hover:-translate-y-0.5 hover:shadow-pop">
                 <div className="flex items-center gap-3">
                   <Avatar nombre={nombreDocente(d)} />
                   <div className="min-w-0 flex-1">
@@ -154,7 +154,7 @@ export default function Seguimiento() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-display text-2xl leading-none font-extrabold tabular-nums">{p.toFixed(1)}</p>
+                    <p className="font-display text-2xl leading-none font-semibold tabular-nums">{p.toFixed(1)}</p>
                     <p className="text-[11px] text-muted">de 4</p>
                   </div>
                 </div>
@@ -229,8 +229,8 @@ export default function Seguimiento() {
                   </tr>
                 ))}
                 <tr>
-                  <td className="py-2.5 font-bold">Promedio</td>
-                  <td colSpan={4} className="text-center font-display text-lg font-bold">
+                  <td className="py-2.5 font-semibold">Promedio</td>
+                  <td colSpan={4} className="text-center font-display text-lg font-semibold">
                     {promedio(detalle).toFixed(2)}
                   </td>
                 </tr>
@@ -245,7 +245,7 @@ export default function Seguimiento() {
             ).map(([t, v]) =>
               v ? (
                 <div key={t}>
-                  <p className="mb-1 text-xs font-bold tracking-wider text-muted uppercase">{t}</p>
+                  <p className="mb-1 text-xs font-semibold tracking-wider text-muted uppercase">{t}</p>
                   <p className="whitespace-pre-line">{v}</p>
                 </div>
               ) : null,
@@ -372,7 +372,7 @@ function FormSeguimiento({ abierto, seg, onCerrar }: { abierto: boolean; seg?: T
         </div>
 
         <fieldset>
-          <legend className="mb-3 text-xs font-bold tracking-wider text-muted uppercase">Rúbrica de valoración</legend>
+          <legend className="mb-3 text-xs font-semibold tracking-wider text-muted uppercase">Rúbrica de valoración</legend>
           <div className="flex flex-col gap-3">
             {v.criterios.map((c, i) => (
               <div key={c.criterio} className="rounded-xl border border-line p-3">

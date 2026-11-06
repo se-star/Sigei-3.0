@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { ArrowRight, BookOpenCheck, CalendarDays, Clock3, GraduationCap, ShieldCheck, UserRound, Users } from 'lucide-react';
+import { ArrowRight, Bell, Check, Clock3, GraduationCap, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { Boton, Campo, Entrada } from '@/components/ui';
-import { Logo } from '@/components/layout/Logo';
+import { Logo, Wordmark } from '@/components/layout/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { backend, modoDemo } from '@/lib/backend';
@@ -17,72 +17,74 @@ const ROLES_DEMO: { rol: Rol; titulo: string; texto: string; icono: typeof Users
 
 export default function Login() {
   return (
-    <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
-      <Presentacion />
-      <div className="flex items-center justify-center px-5 py-10 sm:px-10">
-        <div className="anim-rise w-full max-w-md">
-          <div className="mb-8 flex items-center gap-3 lg:hidden">
-            <Logo className="size-10" />
-            <p className="font-display text-xl font-extrabold">
-              SIGEI <span className="text-brand">3.0</span>
-            </p>
+    <div className="min-h-dvh px-4 pt-10 pb-16 sm:pt-14">
+      <div className="mx-auto flex max-w-[1200px] flex-col items-center">
+        <Constelacion />
+        <div className="anim-rise -mt-2 flex flex-col items-center text-center">
+          <div className="flex items-center gap-3">
+            <Logo className="size-12 sm:size-14" />
+            <Wordmark className="text-[64px] leading-none sm:text-[88px]" />
           </div>
-          {modoDemo ? <AccesoDemo /> : <AccesoNube />}
+          <p className="mt-4 max-w-md text-[17px] text-ink-2">
+            Gestión educativa institucional: docentes, grupos, horarios y novedades en un solo lugar.
+          </p>
         </div>
+        <div className="anim-rise card mt-10 w-full max-w-md p-6 sm:p-8">{modoDemo ? <AccesoDemo /> : <AccesoNube />}</div>
+        <p className="mt-10 text-[13px] text-muted">© {new Date().getFullYear()} SIGEI · Versión 3.0</p>
       </div>
     </div>
   );
 }
 
-function Presentacion() {
-  const puntos = [
-    { icono: Clock3, texto: 'Horarios con detección automática de choques' },
-    { icono: BookOpenCheck, texto: 'Asignación académica y carga docente en tiempo real' },
-    { icono: CalendarDays, texto: 'Novedades, reemplazos y calendario en un solo lugar' },
-  ];
+/** Tarjetas flotantes con contenido real del sistema, a modo de vitrina. */
+function Constelacion() {
+  const tarjeta = 'card anim-flotar absolute flex items-center gap-3 p-3 pr-5 text-left';
   return (
-    <div className="relative hidden overflow-hidden bg-[#0d2b28] p-12 text-white lg:flex lg:flex-col">
-      <div
-        aria-hidden
-        className="absolute -top-40 -right-40 size-[520px] rounded-full opacity-25 blur-3xl"
-        style={{ background: 'radial-gradient(circle, #bef264, transparent 65%)' }}
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-[.07]"
-        style={{
-          backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
-          backgroundSize: '44px 44px',
-        }}
-      />
-      <div className="relative flex items-center gap-3">
-        <Logo className="size-11" />
-        <p className="font-display text-2xl font-extrabold">
-          SIGEI <span className="text-lime">3.0</span>
-        </p>
+    <div className="pointer-events-none relative hidden h-[210px] w-full max-w-[880px] select-none md:block" aria-hidden>
+      <div className={cx(tarjeta, 'top-6 left-0')} style={{ ['--giro' as string]: '-4deg', animationDelay: '0s' }}>
+        <span className="grid size-12 place-items-center rounded-[20px] bg-surface-2">
+          <Clock3 className="size-5" />
+        </span>
+        <span>
+          <span className="block text-sm font-semibold">Matemáticas · 6°1</span>
+          <span className="block text-xs text-muted">Lunes 06:30 – 07:25</span>
+        </span>
       </div>
-      <div className="relative mt-auto max-w-lg">
-        <p className="mb-4 inline-block rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide text-lime">
-          Sistema de Gestión Educativa Institucional
-        </p>
-        <h1 className="text-5xl leading-[1.05] font-extrabold">
-          La gestión del colegio, <span className="text-lime">clara y en orden.</span>
-        </h1>
-        <p className="mt-5 text-lg text-white/70">
-          Docentes, grupos, horarios, novedades y comunicación institucional en una sola plataforma.
-        </p>
-        <ul className="mt-10 flex flex-col gap-4">
-          {puntos.map((p) => (
-            <li key={p.texto} className="flex items-center gap-3 text-white/85">
-              <span className="grid size-9 place-items-center rounded-xl bg-white/10 text-lime">
-                <p.icono className="size-[18px]" />
-              </span>
-              {p.texto}
-            </li>
-          ))}
-        </ul>
+      <div className={cx(tarjeta, 'top-0 left-[30%]')} style={{ ['--giro' as string]: '2deg', animationDelay: '-2s' }}>
+        <span className="grid size-12 place-items-center rounded-full bg-ok-soft text-ok">
+          <Check className="size-5" />
+        </span>
+        <span>
+          <span className="block text-sm font-semibold">Permiso aprobado</span>
+          <span className="block text-xs text-muted">Reemplazo asignado</span>
+        </span>
       </div>
-      <p className="relative mt-12 text-sm text-white/40">© {new Date().getFullYear()} SIGEI · Versión 3.0</p>
+      <div className={cx(tarjeta, 'top-2 right-[4%]')} style={{ ['--giro' as string]: '5deg', animationDelay: '-4s' }}>
+        <span className="flex w-12 flex-col items-center rounded-[20px] bg-ink py-1.5 text-bg">
+          <span className="text-[10px] uppercase">Nov</span>
+          <span className="text-lg leading-none font-semibold">18</span>
+        </span>
+        <span>
+          <span className="block text-sm font-semibold">Feria de la ciencia</span>
+          <span className="block text-xs text-muted">Coliseo · 7:00 a. m.</span>
+        </span>
+      </div>
+      <div className={cx(tarjeta, 'bottom-6 left-[14%]')} style={{ ['--giro' as string]: '3deg', animationDelay: '-1s' }}>
+        <span className="grid size-12 place-items-center rounded-full bg-[#8a7563] text-sm font-medium text-white">LR</span>
+        <span>
+          <span className="block text-sm font-semibold">Laura Restrepo</span>
+          <span className="block text-xs text-muted">17 de 22 horas</span>
+        </span>
+      </div>
+      <div className={cx(tarjeta, 'right-[18%] bottom-2')} style={{ ['--giro' as string]: '-3deg', animationDelay: '-3s' }}>
+        <span className="grid size-12 place-items-center rounded-[20px] bg-surface-2">
+          <Bell className="size-5" />
+        </span>
+        <span>
+          <span className="block text-sm font-semibold">2 solicitudes</span>
+          <span className="block text-xs text-muted">Por revisar hoy</span>
+        </span>
+      </div>
     </div>
   );
 }
@@ -102,36 +104,33 @@ function AccesoDemo() {
   };
   return (
     <>
-      <h2 className="text-3xl font-extrabold">Explore SIGEI 3.0</h2>
-      <p className="mt-2 text-muted">
-        Está en <strong className="text-ink">modo demo</strong>: los datos son de ejemplo y se guardan solo en este navegador.
-        Elija un rol para ver la plataforma desde esa perspectiva.
+      <h2 className="text-[26px] font-semibold">Explore SIGEI 3.0</h2>
+      <p className="mt-1.5 text-[15px] text-muted">
+        Modo demo: los datos son de ejemplo y se guardan solo en este navegador. Elija un rol para entrar.
       </p>
-      <div className="mt-7 flex flex-col gap-2.5">
+      <div className="mt-6 flex flex-col gap-2">
         {ROLES_DEMO.map((r) => (
           <button
             key={r.rol}
             onClick={() => entrar(r.rol)}
             disabled={!!cargando}
             className={cx(
-              'group flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 text-left shadow-soft transition hover:-translate-y-0.5 hover:border-brand/50',
-              cargando === r.rol && 'border-brand',
+              'group flex items-center gap-3 rounded-full border border-line bg-surface p-1.5 pr-4 text-left shadow-chip transition hover:shadow-pop',
+              cargando === r.rol && 'ring-2 ring-accent/30',
             )}
           >
-            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-soft-ink">
-              <r.icono className="size-5" />
+            <span className="grid size-11 shrink-0 place-items-center rounded-full bg-surface-2">
+              <r.icono className="size-[18px]" strokeWidth={1.75} />
             </span>
-            <span className="flex-1">
-              <span className="block font-semibold">{r.titulo}</span>
-              <span className="block text-sm text-muted">{r.texto}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-medium">{r.titulo}</span>
+              <span className="block truncate text-[13px] text-muted">{r.texto}</span>
             </span>
-            <ArrowRight className="size-5 text-muted transition group-hover:translate-x-1 group-hover:text-brand" />
+            <ArrowRight className="size-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-ink" />
           </button>
         ))}
       </div>
-      <p className="mt-6 rounded-xl bg-surface-2 p-3.5 text-[13px] text-ink-2">
-        Para usar datos reales con inicio de sesión, conecte un proyecto Supabase. Vea las instrucciones en el archivo README.
-      </p>
+      <p className="mt-5 text-[13px] text-muted">Para usar datos reales con inicio de sesión, conecte un proyecto Supabase (vea el README).</p>
     </>
   );
 }
@@ -172,13 +171,13 @@ function AccesoNube() {
   const titulos = { entrar: 'Bienvenido de nuevo', registro: 'Solicitar acceso', recuperar: 'Recuperar contraseña' };
   return (
     <>
-      <h2 className="text-3xl font-extrabold">{titulos[modo]}</h2>
-      <p className="mt-2 text-muted">
+      <h2 className="text-[26px] font-semibold">{titulos[modo]}</h2>
+      <p className="mt-1.5 text-[15px] text-muted">
         {modo === 'entrar' && 'Ingrese con su correo institucional.'}
         {modo === 'registro' && 'Cree su cuenta. La administración debe aprobarla antes de que pueda ingresar.'}
         {modo === 'recuperar' && 'Le enviaremos un enlace para crear una contraseña nueva.'}
       </p>
-      {mensaje && <p className="mt-5 rounded-xl bg-ok-soft p-3.5 text-sm font-medium text-ok">{mensaje}</p>}
+      {mensaje && <p className="mt-5 rounded-[20px] bg-ok-soft p-4 text-sm font-medium text-ok">{mensaje}</p>}
       <form onSubmit={enviar} className="mt-7 flex flex-col gap-4">
         {modo === 'registro' && (
           <Campo etiqueta="Nombre completo" requerido>
@@ -213,22 +212,22 @@ function AccesoNube() {
             )}
           </Campo>
         )}
-        <Boton type="submit" cargando={cargando} className="mt-2 h-11">
+        <Boton type="submit" cargando={cargando} className="mt-2 h-12">
           {modo === 'entrar' ? 'Ingresar' : modo === 'registro' ? 'Enviar solicitud' : 'Enviar enlace'}
         </Boton>
       </form>
       <div className="mt-6 flex flex-wrap justify-between gap-2 text-sm">
         {modo === 'entrar' ? (
           <>
-            <button className="font-semibold text-brand hover:underline" onClick={() => setModo('recuperar')}>
+            <button className="text-ink underline underline-offset-2 hover:text-ink-2" onClick={() => setModo('recuperar')}>
               ¿Olvidó su contraseña?
             </button>
-            <button className="font-semibold text-brand hover:underline" onClick={() => setModo('registro')}>
+            <button className="text-ink underline underline-offset-2 hover:text-ink-2" onClick={() => setModo('registro')}>
               Solicitar acceso
             </button>
           </>
         ) : (
-          <button className="font-semibold text-brand hover:underline" onClick={() => setModo('entrar')}>
+          <button className="text-ink underline underline-offset-2 hover:text-ink-2" onClick={() => setModo('entrar')}>
             ← Volver a ingresar
           </button>
         )}

@@ -98,7 +98,7 @@ export default function DocenteDetalle() {
         <Avatar nombre={nombreDocente(d)} tam={72} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-extrabold sm:text-3xl">{nombreDocente(d)}</h1>
+            <h1 className="text-2xl font-semibold sm:text-3xl">{nombreDocente(d)}</h1>
             <Insignia tono={tono(ESTADOS_DOCENTE, d.estado)} punto>
               {etiqueta(ESTADOS_DOCENTE, d.estado)}
             </Insignia>
@@ -215,7 +215,7 @@ export default function DocenteDetalle() {
                   </li>
                 );
               })}
-              <li className="flex items-center justify-between bg-surface-2/60 px-5 py-3 text-sm font-bold">
+              <li className="flex items-center justify-between bg-surface-2/60 px-5 py-3 text-sm font-semibold">
                 <span>Total semanal</span>
                 <span className="tabular-nums">{horas} h</span>
               </li>
@@ -284,7 +284,7 @@ export default function DocenteDetalle() {
                         {fechaCorta(s.fecha)} · {s.observador}
                       </p>
                     </div>
-                    <span className="font-display text-lg font-bold tabular-nums">{prom.toFixed(1)}</span>
+                    <span className="font-display text-lg font-semibold tabular-nums">{prom.toFixed(1)}</span>
                     <span className="text-xs text-muted">/ 4</span>
                   </li>
                 );

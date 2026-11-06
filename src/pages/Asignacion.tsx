@@ -375,7 +375,7 @@ function FormAsignacion({
             <div className={cx('rounded-xl p-4', total > docente.carga_maxima ? 'bg-danger-soft' : 'bg-surface-2')}>
               <div className="mb-1.5 flex justify-between text-sm">
                 <span className="font-semibold">Carga resultante</span>
-                <span className="font-bold tabular-nums">
+                <span className="font-semibold tabular-nums">
                   {total} / {docente.carga_maxima} h
                 </span>
               </div>

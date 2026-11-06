@@ -78,7 +78,7 @@ export default function Comunicados() {
       ) : (
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           {lista.map((c) => (
-            <article key={c.id} className={cx('card anim-rise p-6', c.fijado && 'border-brand/40 ring-1 ring-brand/20')}>
+            <article key={c.id} className={cx('card anim-rise p-6', c.fijado && 'ring-1 ring-ink/10')}>
               <header className="mb-3 flex items-start gap-3">
                 <Avatar nombre={c.autor} tam={40} />
                 <div className="min-w-0 flex-1">
@@ -96,7 +96,7 @@ export default function Comunicados() {
                   {c.prioridad !== 'normal' && <Insignia tono={tono(PRIORIDADES, c.prioridad)}>Prioridad {etiqueta(PRIORIDADES, c.prioridad).toLowerCase()}</Insignia>}
                 </div>
               </header>
-              <h2 className="text-xl font-bold">{c.titulo}</h2>
+              <h2 className="text-xl font-semibold">{c.titulo}</h2>
               <p className="mt-2 leading-relaxed whitespace-pre-line text-ink-2">{c.contenido}</p>
               {puede && (
                 <footer className="mt-4 flex gap-1 border-t border-line pt-3">

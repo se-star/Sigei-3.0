@@ -139,7 +139,7 @@ export default function Novedades() {
             ['Vigentes sin reemplazo', resumen.sinReemplazo],
           ].map(([t, v]) => (
             <div key={t} className="card p-4">
-              <p className="font-display text-2xl font-extrabold tabular-nums">{v}</p>
+              <p className="font-display text-2xl font-semibold tabular-nums">{v}</p>
               <p className="text-sm text-muted">{t}</p>
             </div>
           ))}

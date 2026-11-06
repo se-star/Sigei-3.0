@@ -109,7 +109,7 @@ export function FormDocente({
         }}
       >
         <fieldset className="grid gap-4 sm:grid-cols-2">
-          <legend className="mb-3 text-xs font-bold tracking-wider text-muted uppercase">Datos personales</legend>
+          <legend className="mb-3 text-xs font-semibold tracking-wider text-muted uppercase">Datos personales</legend>
           <Campo etiqueta="Nombres" requerido error={err.nombres}>
             {(id) => <Entrada id={id} {...campo('nombres')} autoComplete="off" />}
           </Campo>
@@ -143,7 +143,7 @@ export function FormDocente({
         </fieldset>
 
         <fieldset className="grid gap-4 sm:grid-cols-2">
-          <legend className="mb-3 text-xs font-bold tracking-wider text-muted uppercase">Vinculación laboral</legend>
+          <legend className="mb-3 text-xs font-semibold tracking-wider text-muted uppercase">Vinculación laboral</legend>
           <Campo etiqueta="Cargo">
             {(id) => <Entrada id={id} {...campo('cargo')} />}
           </Campo>

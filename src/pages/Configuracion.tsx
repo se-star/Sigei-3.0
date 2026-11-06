@@ -121,7 +121,7 @@ function Areas() {
       toast.error(e);
     }
   };
-  const colores = ['#0f766e', '#b45309', '#15803d', '#7c3aed', '#1d4ed8', '#db2777', '#c2410c', '#64748b'];
+  const colores = ['#4f7a86', '#b0784a', '#6f8f5e', '#8f7aa8', '#5a77a8', '#b56f86', '#c08a3e', '#8a8580'];
 
   return (
     <div className="flex flex-col gap-4">
@@ -234,7 +234,7 @@ function Franjas() {
       <ul className="flex flex-col gap-2">
         {lista.map((f, i) => (
           <li key={i} className={cx('flex flex-wrap items-center gap-2 rounded-xl border p-2', errores[i] ? 'border-danger/50 bg-danger-soft/40' : 'border-line')}>
-            <span className="w-7 text-center text-sm font-bold text-muted tabular-nums">{f.descanso ? <Coffee className="mx-auto size-4" /> : lista.slice(0, i + 1).filter((x) => !x.descanso).length}</span>
+            <span className="w-7 text-center text-sm font-semibold text-muted tabular-nums">{f.descanso ? <Coffee className="mx-auto size-4" /> : lista.slice(0, i + 1).filter((x) => !x.descanso).length}</span>
             <Entrada type="time" value={f.inicio} onChange={(e) => upd(i, { inicio: e.target.value })} className="h-9 w-32" aria-label="Inicio" />
             <span className="text-muted">a</span>
             <Entrada type="time" value={f.fin} onChange={(e) => upd(i, { fin: e.target.value })} className="h-9 w-32" aria-label="Fin" />

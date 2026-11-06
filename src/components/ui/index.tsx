@@ -19,11 +19,11 @@ import type { Tono } from '@/lib/catalogos';
 type Variante = 'primario' | 'secundario' | 'fantasma' | 'peligro' | 'lima';
 
 const VARIANTES: Record<Variante, string> = {
-  primario: 'bg-brand text-brand-ink hover:bg-brand-hover shadow-sm',
-  secundario: 'bg-surface text-ink border border-line hover:border-line-strong hover:bg-surface-2',
+  primario: 'bg-brand text-brand-ink hover:bg-brand-hover',
+  secundario: 'bg-surface text-ink border border-line shadow-chip hover:border-line-strong',
   fantasma: 'text-ink-2 hover:bg-surface-2 hover:text-ink',
   peligro: 'bg-danger text-white hover:brightness-110',
-  lima: 'bg-lime text-lime-ink hover:brightness-95',
+  lima: 'bg-surface text-ink shadow-chip hover:shadow-pop',
 };
 
 interface BotonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -43,9 +43,9 @@ export const Boton = forwardRef<HTMLButtonElement, BotonProps>(function Boton(
       type={type}
       disabled={disabled || cargando}
       className={cx(
-        'inline-flex shrink-0 items-center justify-center gap-2 rounded-xl font-semibold whitespace-nowrap transition active:scale-[.98] disabled:pointer-events-none disabled:opacity-55',
-        tam === 'sm' && 'h-8 px-3 text-[13px]',
-        tam === 'md' && 'h-10 px-4 text-sm',
+        'inline-flex shrink-0 items-center justify-center gap-2 rounded-full font-medium whitespace-nowrap transition active:scale-[.98] disabled:pointer-events-none disabled:opacity-55',
+        tam === 'sm' && 'h-8 px-3.5 text-[13px]',
+        tam === 'md' && 'h-10 px-5 text-[15px]',
         tam === 'icono' && 'size-9',
         VARIANTES[variante],
         className,
@@ -73,15 +73,15 @@ export function Campo({ etiqueta, ayuda, error, requerido, className, children }
   const id = useId();
   return (
     <div className={cx('flex flex-col gap-1.5', className)}>
-      <label htmlFor={id} className="text-[13px] font-semibold text-ink-2">
+      <label htmlFor={id} className="pl-1 text-[13px] font-medium text-ink-2">
         {etiqueta}
         {requerido && <span className="ml-0.5 text-danger">*</span>}
       </label>
       {children(id)}
       {error ? (
-        <p className="text-xs font-medium text-danger">{error}</p>
+        <p className="pl-1 text-xs font-medium text-danger">{error}</p>
       ) : ayuda ? (
-        <p className="text-xs text-muted">{ayuda}</p>
+        <p className="pl-1 text-xs text-muted">{ayuda}</p>
       ) : null}
     </div>
   );
@@ -147,21 +147,21 @@ export function Interruptor({
 /* ───────── Insignia ───────── */
 
 const TONOS: Record<Tono, string> = {
-  neutral: 'bg-surface-2 text-ink-2 ring-line',
-  brand: 'bg-brand-soft text-brand-soft-ink ring-brand/20',
-  ok: 'bg-ok-soft text-ok ring-ok/20',
-  warn: 'bg-warn-soft text-warn ring-warn/20',
-  danger: 'bg-danger-soft text-danger ring-danger/20',
-  info: 'bg-info-soft text-info ring-info/20',
-  violet: 'bg-violet-soft text-violet ring-violet/20',
-  lime: 'bg-lime text-lime-ink ring-lime-ink/10',
+  neutral: 'bg-surface text-ink-2 ring-line',
+  brand: 'bg-surface-2 text-ink ring-transparent',
+  ok: 'bg-ok-soft text-ok ring-transparent',
+  warn: 'bg-warn-soft text-warn ring-transparent',
+  danger: 'bg-danger-soft text-danger ring-transparent',
+  info: 'bg-info-soft text-info ring-transparent',
+  violet: 'bg-violet-soft text-violet ring-transparent',
+  lime: 'bg-lime text-lime-ink ring-transparent',
 };
 
 export function Insignia({ tono = 'neutral', children, punto }: { tono?: Tono; children: ReactNode; punto?: boolean }) {
   return (
     <span
       className={cx(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ring-1 ring-inset',
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset',
         TONOS[tono],
       )}
     >
@@ -177,7 +177,7 @@ export function Avatar({ nombre, tam = 36 }: { nombre: string; tam?: number }) {
   return (
     <span
       aria-hidden
-      className="inline-grid shrink-0 place-items-center rounded-full font-display font-bold text-white"
+      className="inline-grid shrink-0 place-items-center rounded-full font-medium tracking-tight text-white"
       style={{ width: tam, height: tam, background: colorDe(nombre), fontSize: tam * 0.38 }}
     >
       {iniciales(nombre)}
@@ -205,15 +205,15 @@ export function Tarjeta({
   return (
     <section className={cx('card', className)}>
       {(titulo || accion) && (
-        <header className="flex items-center justify-between gap-3 px-5 pt-4 pb-1">
-          <h2 className="flex items-center gap-2 font-display text-[15px] font-bold">
-            {icono && <span className="text-brand">{icono}</span>}
+        <header className="flex items-center justify-between gap-3 px-6 pt-5 pb-1">
+          <h2 className="flex items-center gap-2 text-[17px] font-semibold">
+            {icono && <span className="text-muted">{icono}</span>}
             {titulo}
           </h2>
           {accion}
         </header>
       )}
-      <div className={cx(!sinRelleno && 'p-5', sinRelleno && !!(titulo || accion) && 'pt-2')}>{children}</div>
+      <div className={cx(!sinRelleno && 'p-6', sinRelleno && !!(titulo || accion) && 'pt-2')}>{children}</div>
     </section>
   );
 }
@@ -230,10 +230,10 @@ export function Encabezado({
   acciones?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-[28px] leading-tight font-extrabold sm:text-[32px]">{titulo}</h1>
-        {descripcion && <p className="mt-1 max-w-2xl text-[15px] text-muted">{descripcion}</p>}
+        <h1 className="text-[30px] font-semibold sm:text-[36px]">{titulo}</h1>
+        {descripcion && <p className="mt-2 max-w-2xl text-[15px] text-muted">{descripcion}</p>}
       </div>
       {acciones && <div className="no-print flex flex-wrap items-center gap-2">{acciones}</div>}
     </div>
@@ -255,10 +255,10 @@ export function Vacio({
 }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      <div className="mb-4 grid size-14 place-items-center rounded-2xl bg-surface-2 text-muted">
+      <div className="mb-4 grid size-14 place-items-center rounded-full bg-surface-2 text-muted">
         {icono ?? <Inbox className="size-6" />}
       </div>
-      <p className="font-display text-base font-bold">{titulo}</p>
+      <p className="text-[17px] font-semibold tracking-tight">{titulo}</p>
       {texto && <p className="mt-1 max-w-sm text-sm text-muted">{texto}</p>}
       {accion && <div className="mt-5">{accion}</div>}
     </div>
@@ -268,7 +268,7 @@ export function Vacio({
 export function Cargando({ texto = 'Cargando…' }: { texto?: string }) {
   return (
     <div className="flex items-center justify-center gap-3 py-16 text-sm text-muted">
-      <Loader2 className="size-5 animate-spin text-brand" />
+      <Loader2 className="size-5 animate-spin text-accent" />
       {texto}
     </div>
   );
@@ -323,7 +323,7 @@ export function Modal({ abierto, onCerrar, titulo, descripcion, children, pie, a
   if (!abierto) return null;
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-6">
-      <div className="anim-fade absolute inset-0 bg-ink/40 backdrop-blur-[2px]" onClick={onCerrar} />
+      <div className="anim-fade absolute inset-0 bg-black/25" onClick={onCerrar} />
       <div
         ref={ref}
         tabIndex={-1}
@@ -331,7 +331,7 @@ export function Modal({ abierto, onCerrar, titulo, descripcion, children, pie, a
         aria-modal="true"
         aria-label={titulo}
         className={cx(
-          'anim-rise relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-line bg-surface shadow-pop outline-none sm:rounded-3xl',
+          'anim-rise relative flex max-h-[92dvh] w-full flex-col rounded-t-[28px] bg-surface shadow-pop outline-none sm:rounded-[28px]',
           ancho === 'sm' && 'sm:max-w-md',
           ancho === 'md' && 'sm:max-w-xl',
           ancho === 'lg' && 'sm:max-w-3xl',
@@ -340,7 +340,7 @@ export function Modal({ abierto, onCerrar, titulo, descripcion, children, pie, a
       >
         <CabeceraDialogo titulo={titulo} descripcion={descripcion} onCerrar={onCerrar} />
         <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-5">{children}</div>
-        {pie && <div className="flex flex-wrap justify-end gap-2 border-t border-line px-6 py-4">{pie}</div>}
+        {pie && <div className="flex flex-wrap justify-end gap-2 px-6 pt-3 pb-6">{pie}</div>}
       </div>
     </div>,
     document.body,
@@ -353,18 +353,18 @@ export function Panel({ abierto, onCerrar, titulo, descripcion, children, pie }:
   if (!abierto) return null;
   return createPortal(
     <div className="fixed inset-0 z-[60] flex justify-end">
-      <div className="anim-fade absolute inset-0 bg-ink/40 backdrop-blur-[2px]" onClick={onCerrar} />
+      <div className="anim-fade absolute inset-0 bg-black/25" onClick={onCerrar} />
       <div
         ref={ref}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={titulo}
-        className="anim-slide relative flex h-full w-full max-w-xl flex-col border-l border-line bg-surface shadow-pop outline-none"
+        className="anim-slide relative flex h-full w-full max-w-xl flex-col bg-surface shadow-pop outline-none sm:my-2 sm:mr-2 sm:h-[calc(100%-16px)] sm:rounded-[28px]"
       >
         <CabeceraDialogo titulo={titulo} descripcion={descripcion} onCerrar={onCerrar} />
         <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-5">{children}</div>
-        {pie && <div className="flex flex-wrap justify-end gap-2 border-t border-line px-6 py-4">{pie}</div>}
+        {pie && <div className="flex flex-wrap justify-end gap-2 px-6 pt-3 pb-6">{pie}</div>}
       </div>
     </div>,
     document.body,
@@ -373,9 +373,9 @@ export function Panel({ abierto, onCerrar, titulo, descripcion, children, pie }:
 
 function CabeceraDialogo({ titulo, descripcion, onCerrar }: { titulo: string; descripcion?: string; onCerrar: () => void }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-line px-6 pt-5 pb-4">
+    <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-3">
       <div>
-        <h2 className="text-xl font-bold">{titulo}</h2>
+        <h2 className="text-[22px] font-semibold">{titulo}</h2>
         {descripcion && <p className="mt-0.5 text-sm text-muted">{descripcion}</p>}
       </div>
       <Boton variante="fantasma" tam="icono" onClick={onCerrar} aria-label="Cerrar">
@@ -401,7 +401,7 @@ export function Segmentos<V extends string>({
   return (
     <div
       role="tablist"
-      className={cx('scrollbar-thin inline-flex max-w-full gap-1 overflow-x-auto rounded-xl bg-surface-2 p-1', className)}
+      className={cx('scrollbar-thin inline-flex max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-surface p-1 shadow-chip', className)}
     >
       {opciones.map((o) => (
         <button
@@ -410,8 +410,8 @@ export function Segmentos<V extends string>({
           aria-selected={valor === o.valor}
           onClick={() => onCambio(o.valor)}
           className={cx(
-            'flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold whitespace-nowrap transition',
-            valor === o.valor ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink',
+            'flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition',
+            valor === o.valor ? 'bg-ink text-bg' : 'text-muted hover:text-ink',
           )}
         >
           {o.etiqueta}
@@ -419,7 +419,7 @@ export function Segmentos<V extends string>({
             <span
               className={cx(
                 'rounded-full px-1.5 text-[11px] tabular-nums',
-                valor === o.valor ? 'bg-brand-soft text-brand-soft-ink' : 'bg-surface-3',
+                valor === o.valor ? 'bg-white/20 text-bg' : 'bg-surface-2',
               )}
             >
               {o.cuenta}
@@ -438,7 +438,7 @@ export function Progreso({ valor, max, tono }: { valor: number; max: number; ton
   const color =
     tono === 'brand' ? 'bg-brand' : valor > max ? 'bg-danger' : pct >= 85 ? 'bg-warn' : 'bg-brand';
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={valor} aria-valuemax={max}>
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={valor} aria-valuemax={max}>
       <div className={cx('h-full rounded-full transition-all', color)} style={{ width: `${pct}%` }} />
     </div>
   );

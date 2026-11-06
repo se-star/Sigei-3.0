@@ -27,7 +27,7 @@ import { Avatar } from '@/components/ui';
 import { etiqueta, ROLES } from '@/lib/catalogos';
 import { modoDemo } from '@/lib/backend';
 import { cx } from '@/lib/utils';
-import { Logo } from './Logo';
+import { Logo, Wordmark } from './Logo';
 
 export function Shell() {
   const { perfil, ver, salir } = useAuth();
@@ -52,40 +52,42 @@ export function Shell() {
         setPaleta((p) => !p);
       }
     };
+    const abrir = () => setPaleta(true);
     window.addEventListener('keydown', fn);
-    return () => window.removeEventListener('keydown', fn);
+    window.addEventListener('sigei:buscar', abrir);
+    return () => {
+      window.removeEventListener('keydown', fn);
+      window.removeEventListener('sigei:buscar', abrir);
+    };
   }, []);
 
   if (!perfil) return null;
 
   const menu = (mini: boolean) => (
-    <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 pb-4" aria-label="Menú principal">
+    <nav className={cx('scrollbar-thin flex-1 overflow-y-auto pb-4', mini ? 'px-2' : 'px-3')} aria-label="Menú principal">
       {NAVEGACION.map((g) => {
         const items = g.items.filter((i) => ver(i.modulo));
         if (!items.length) return null;
         return (
-          <div key={g.grupo} className="mt-5 first:mt-2">
-            {!mini && (
-              <p className="mb-1.5 px-3 text-[11px] font-bold tracking-[.12em] text-white/40 uppercase">{g.grupo}</p>
-            )}
-            <ul className="flex flex-col gap-0.5">
+          <div key={g.grupo} className={cx('mt-5 first:mt-1', mini && 'mt-3 border-t border-line pt-3 first:border-0 first:pt-0')}>
+            {!mini && <p className="mb-1 px-3 text-xs font-medium text-muted">{g.grupo}</p>}
+            <ul className={cx('flex flex-col gap-0.5', mini && 'items-center')}>
               {items.map((i) => (
-                <li key={i.ruta}>
+                <li key={i.ruta} className={cx(mini && 'w-12')}>
                   <NavLink
                     to={i.ruta}
                     end={i.ruta === '/'}
                     title={mini ? i.etiqueta : undefined}
+                    aria-label={mini ? i.etiqueta : undefined}
                     className={({ isActive }) =>
                       cx(
-                        'group flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium transition',
-                        mini && 'justify-center px-0',
-                        isActive
-                          ? 'bg-lime text-lime-ink shadow-sm'
-                          : 'text-white/70 hover:bg-white/8 hover:text-white',
+                        'flex items-center gap-3 rounded-[20px] text-[15px] transition',
+                        mini ? 'size-12 justify-center' : 'h-10 px-3',
+                        isActive ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:bg-surface-2/60 hover:text-ink',
                       )
                     }
                   >
-                    <i.icono className="size-[18px] shrink-0" strokeWidth={2} />
+                    <i.icono className="size-[20px] shrink-0" strokeWidth={1.75} />
                     {!mini && <span className="truncate">{i.etiqueta}</span>}
                   </NavLink>
                 </li>
@@ -98,48 +100,49 @@ export function Shell() {
   );
 
   const marca = (mini: boolean) => (
-    <div className={cx('flex items-center gap-3 px-5 pt-5 pb-3', mini && 'justify-center px-0')}>
+    <NavLink to="/" className={cx('flex items-center gap-2.5 pt-5 pb-4', mini ? 'justify-center' : 'px-5')} aria-label="Ir al inicio">
       <Logo className="size-9 shrink-0" />
       {!mini && (
-        <div className="min-w-0">
-          <p className="font-display text-lg leading-none font-extrabold text-white">
-            SIGEI<span className="ml-1 text-lime">3</span>
-          </p>
-          <p className="mt-1 truncate text-xs text-white/50">{ajustes.sigla || ajustes.institucion}</p>
-        </div>
+        <span className="min-w-0">
+          <Wordmark className="block text-[24px] leading-none" />
+          <span className="mt-1 block truncate text-xs text-muted">{ajustes.sigla || ajustes.institucion}</span>
+        </span>
       )}
-    </div>
+    </NavLink>
   );
 
   return (
     <div className="min-h-dvh">
-      {/* Menú lateral escritorio */}
+      {/* Menú lateral escritorio: blanco, sin borde; se contrae a un riel de 64px. */}
       <aside
         className={cx(
-          'no-print fixed inset-y-0 left-0 z-40 hidden flex-col bg-[#0d2b28] transition-[width] duration-300 lg:flex dark:bg-[#0a1a18]',
-          colapsado ? 'w-[76px]' : 'w-[264px]',
+          'no-print fixed inset-y-0 left-0 z-40 hidden flex-col bg-surface transition-[width] duration-300 lg:flex',
+          colapsado ? 'w-16' : 'w-[264px]',
         )}
       >
         {marca(colapsado)}
         {menu(colapsado)}
         <button
           onClick={() => setColapsado(!colapsado)}
-          className="m-3 flex items-center justify-center gap-2 rounded-xl py-2 text-xs font-semibold text-white/50 hover:bg-white/8 hover:text-white"
+          className={cx(
+            'mx-auto mb-4 flex h-9 items-center justify-center gap-2 rounded-full text-[13px] text-muted transition hover:bg-surface-2 hover:text-ink',
+            colapsado ? 'w-9' : 'px-4',
+          )}
           aria-label={colapsado ? 'Expandir menú' : 'Contraer menú'}
         >
           <ChevronsLeft className={cx('size-4 transition', colapsado && 'rotate-180')} />
-          {!colapsado && 'Contraer'}
+          {!colapsado && 'Contraer menú'}
         </button>
       </aside>
 
       {/* Menú móvil */}
       {movil && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="anim-fade absolute inset-0 bg-ink/50" onClick={() => setMovil(false)} />
-          <aside className="anim-rise relative flex h-full w-[280px] flex-col bg-[#0d2b28] dark:bg-[#0a1a18]">
+          <div className="anim-fade absolute inset-0 bg-black/25" onClick={() => setMovil(false)} />
+          <aside className="anim-rise relative m-2 flex h-[calc(100%-16px)] w-[280px] flex-col rounded-[28px] bg-surface shadow-pop">
             <button
               onClick={() => setMovil(false)}
-              className="absolute top-5 right-4 text-white/60 hover:text-white"
+              className="absolute top-5 right-4 grid size-9 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
               aria-label="Cerrar menú"
             >
               <X className="size-5" />
@@ -150,29 +153,20 @@ export function Shell() {
         </div>
       )}
 
-      <div className={cx('transition-[padding] duration-300', colapsado ? 'lg:pl-[76px]' : 'lg:pl-[264px]')}>
-        <header className="no-print sticky top-0 z-30 border-b border-line/70 bg-bg/85 backdrop-blur-md">
-          <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className={cx('transition-[padding] duration-300', colapsado ? 'lg:pl-16' : 'lg:pl-[264px]')}>
+        <header className="no-print sticky top-0 z-30 bg-bg/80 backdrop-blur-md">
+          <div className="mx-auto flex h-[72px] max-w-[1200px] items-center gap-3 px-4 sm:px-6 lg:px-10">
             <button
-              className="grid size-9 place-items-center rounded-xl text-ink-2 hover:bg-surface-2 lg:hidden"
+              className="grid size-10 place-items-center rounded-full bg-surface text-ink shadow-chip lg:hidden"
               onClick={() => setMovil(true)}
               aria-label="Abrir menú"
             >
               <Menu className="size-5" />
             </button>
-            <button
-              onClick={() => setPaleta(true)}
-              className="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line bg-surface px-3 text-left text-sm text-muted transition hover:border-line-strong sm:max-w-md"
-            >
-              <Search className="size-4 shrink-0" />
-              <span className="truncate">Buscar docentes, grupos, módulos…</span>
-              <kbd className="ml-auto hidden rounded-md border border-line bg-surface-2 px-1.5 py-0.5 font-sans text-[11px] font-semibold sm:inline">
-                Ctrl K
-              </kbd>
-            </button>
+            {loc.pathname === '/' ? <div className="flex-1" /> : <BusquedaPildora onAbrir={() => setPaleta(true)} />}
             <div className="ml-auto flex items-center gap-1.5">
               {modoDemo && (
-                <span className="hidden items-center gap-1.5 rounded-full bg-lime px-3 py-1 text-xs font-bold text-lime-ink md:inline-flex">
+                <span className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] text-ink-2 shadow-chip md:inline-flex">
                   <FlaskConical className="size-3.5" />
                   Modo demo
                 </span>
@@ -183,12 +177,37 @@ export function Shell() {
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <main className="mx-auto max-w-[1200px] px-4 pt-4 pb-16 sm:px-6 lg:px-10">
           <Outlet />
         </main>
       </div>
       <Paleta abierta={paleta} onCerrar={() => setPaleta(false)} />
     </div>
+  );
+}
+
+/** Búsqueda en píldora con botón circular violeta: el único acento saturado. */
+export function BusquedaPildora({ onAbrir, grande }: { onAbrir: () => void; grande?: boolean }) {
+  return (
+    <button
+      onClick={onAbrir}
+      className={cx(
+        'group flex min-w-0 flex-1 items-center gap-3 rounded-full border border-black/10 bg-surface text-left text-muted shadow-chip transition hover:shadow-pop dark:border-white/10',
+        grande ? 'h-14 max-w-xl py-1 pr-1 pl-5 text-[16px]' : 'h-12 py-1 pr-1 pl-5 text-[15px] sm:max-w-md',
+      )}
+    >
+      <span className="truncate">Buscar docentes, grupos o módulos</span>
+      <kbd className="ml-auto hidden rounded-full border border-line px-2 py-0.5 font-sans text-[11px] text-muted sm:inline">Ctrl K</kbd>
+      <span
+        className={cx(
+          'grid shrink-0 place-items-center rounded-full bg-accent text-white shadow-accent transition group-hover:brightness-110',
+          grande ? 'size-12' : 'size-10',
+        )}
+        aria-hidden
+      >
+        <Search className="size-[18px]" strokeWidth={2.25} />
+      </span>
+    </button>
   );
 }
 
@@ -200,7 +219,7 @@ function SelectorTema() {
   return (
     <button
       onClick={() => setTema(sig[tema])}
-      className="grid size-10 place-items-center rounded-xl text-ink-2 transition hover:bg-surface-2 hover:text-ink"
+      className="grid size-10 place-items-center rounded-full bg-surface text-ink shadow-chip transition hover:shadow-pop"
       title={`Tema ${nombre} (clic para cambiar)`}
       aria-label={`Tema ${nombre}. Cambiar tema`}
     >
@@ -225,13 +244,13 @@ function Campana() {
     <div className="relative">
       <button
         onClick={() => setAbierta(!abierta)}
-        className="relative grid size-10 place-items-center rounded-xl text-ink-2 transition hover:bg-surface-2 hover:text-ink"
+        className="relative grid size-10 place-items-center rounded-full bg-surface text-ink shadow-chip transition hover:shadow-pop"
         aria-label={`Notificaciones${noLeidas ? `, ${noLeidas} sin leer` : ''}`}
         aria-expanded={abierta}
       >
         <Bell className="size-[18px]" />
         {noLeidas > 0 && (
-          <span className="absolute top-1.5 right-1.5 grid min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] leading-4 font-bold text-white">
+          <span className="absolute -top-0.5 -right-0.5 grid min-w-[18px] place-items-center rounded-full bg-ink px-1 text-[10px] leading-[18px] font-medium text-bg">
             {noLeidas > 9 ? '9+' : noLeidas}
           </span>
         )}
@@ -239,11 +258,11 @@ function Campana() {
       {abierta && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setAbierta(false)} />
-          <div className="anim-rise absolute right-0 z-50 mt-2 w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-line bg-surface shadow-pop">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3">
-              <p className="font-display font-bold">Notificaciones</p>
+          <div className="anim-rise absolute right-0 z-50 mt-2 w-[min(92vw,380px)] overflow-hidden rounded-[28px] bg-surface shadow-pop">
+            <div className="flex items-center justify-between px-5 pt-5 pb-2">
+              <p className="text-[17px] font-semibold tracking-tight">Notificaciones</p>
               {noLeidas > 0 && (
-                <button onClick={marcarTodas} className="text-xs font-semibold text-brand hover:underline">
+                <button onClick={marcarTodas} className="text-xs text-ink underline-offset-2 hover:underline">
                   Marcar todo como leído
                 </button>
               )}
@@ -262,17 +281,17 @@ function Campana() {
                       }}
                       className={cx(
                         'flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-surface-2',
-                        !n.leida && 'bg-brand-soft/40',
+                        !n.leida && "bg-surface-2/60",
                       )}
                     >
-                      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-brand">
+                      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-surface-2 text-ink">
                         <I className="size-4" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">{n.titulo}</span>
                         <span className="block truncate text-xs text-muted">{n.detalle}</span>
                       </span>
-                      {!n.leida && <span className="mt-2 size-2 shrink-0 rounded-full bg-brand" />}
+                      {!n.leida && <span className="mt-2 size-2 shrink-0 rounded-full bg-ink" />}
                     </button>
                   </li>
                 );
@@ -292,11 +311,11 @@ function MenuUsuario({ nombre, rol, onSalir }: { nombre: string; rol: string; on
     <div className="relative">
       <button
         onClick={() => setAbierto(!abierto)}
-        className="flex items-center gap-2.5 rounded-xl py-1 pr-2 pl-1 transition hover:bg-surface-2"
+        className="flex items-center gap-2.5 rounded-full bg-surface py-1 pr-4 pl-1 shadow-chip transition hover:shadow-pop"
         aria-expanded={abierto}
         aria-label="Menú de usuario"
       >
-        <Avatar nombre={nombre} tam={34} />
+        <Avatar nombre={nombre} tam={32} />
         <span className="hidden text-left leading-tight md:block">
           <span className="block max-w-36 truncate text-sm font-semibold">{nombre}</span>
           <span className="block text-xs text-muted">{rol}</span>
@@ -305,19 +324,19 @@ function MenuUsuario({ nombre, rol, onSalir }: { nombre: string; rol: string; on
       {abierto && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)} />
-          <div className="anim-rise absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-line bg-surface p-1.5 shadow-pop">
+          <div className="anim-rise absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-[28px] bg-surface p-2 shadow-pop">
             <button
               onClick={() => {
                 setAbierto(false);
                 nav('/perfil');
               }}
-              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium hover:bg-surface-2"
+              className="flex w-full items-center gap-2.5 rounded-[20px] px-3 py-2.5 text-sm hover:bg-surface-2"
             >
               <UserRound className="size-4" /> Mi perfil
             </button>
             <button
               onClick={onSalir}
-              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-danger hover:bg-danger-soft"
+              className="flex w-full items-center gap-2.5 rounded-[20px] px-3 py-2.5 text-sm text-danger hover:bg-danger-soft"
             >
               <LogOut className="size-4" /> Cerrar sesión
             </button>

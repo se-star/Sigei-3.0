@@ -215,7 +215,7 @@ export default function Reportes() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {ESTADOS_DOCENTE.map((e) => (
               <div key={e.valor} className="rounded-xl bg-surface-2 p-4">
-                <p className="font-display text-3xl font-extrabold tabular-nums">{docentes.filter((d) => d.estado === e.valor).length}</p>
+                <p className="font-display text-3xl font-semibold tabular-nums">{docentes.filter((d) => d.estado === e.valor).length}</p>
                 <p className="text-sm text-muted">{e.etiqueta}</p>
               </div>
             ))}
@@ -223,10 +223,10 @@ export default function Reportes() {
         </Tarjeta>
       </div>
 
-      <h2 className="mt-10 mb-4 text-xl font-bold">Exportar datos</h2>
+      <h2 className="mt-10 mb-4 text-xl font-semibold">Exportar datos</h2>
       <div className="no-print grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {exportaciones.map((x) => (
-          <button key={x.titulo} onClick={x.accion} className="card group flex items-center gap-4 p-4 text-left transition hover:border-brand/40">
+          <button key={x.titulo} onClick={x.accion} className="card group flex items-center gap-4 p-4 text-left transition hover:shadow-pop">
             <span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand-soft-ink">
               <Download className="size-[18px]" />
             </span>

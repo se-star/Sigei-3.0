@@ -28,7 +28,7 @@ export default function Perfil() {
           <div className="flex items-center gap-4">
             <Avatar nombre={perfil.nombre} tam={64} />
             <div className="min-w-0">
-              <p className="truncate font-display text-xl font-bold">{perfil.nombre}</p>
+              <p className="truncate font-display text-xl font-semibold">{perfil.nombre}</p>
               <p className="truncate text-sm text-muted">{perfil.email}</p>
               <div className="mt-2">
                 <Insignia tono={tono(ROLES, perfil.rol)}>{etiqueta(ROLES, perfil.rol)}</Insignia>

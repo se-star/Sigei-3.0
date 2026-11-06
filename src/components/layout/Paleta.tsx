@@ -82,7 +82,7 @@ export function Paleta({ abierta, onCerrar }: { abierta: boolean; onCerrar: () =
   let seccionPrevia = '';
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-start justify-center p-4 pt-[12vh]">
-      <div className="anim-fade absolute inset-0 bg-ink/40 backdrop-blur-[2px]" onClick={onCerrar} />
+      <div className="anim-fade absolute inset-0 bg-black/25" onClick={onCerrar} />
       <div
         role="dialog"
         aria-modal="true"
@@ -124,7 +124,7 @@ export function Paleta({ abierta, onCerrar }: { abierta: boolean; onCerrar: () =
             return (
               <li key={r.seccion + r.id} role="option" aria-selected={i === sel}>
                 {cabecera && (
-                  <p className="px-3 pt-2 pb-1 text-[11px] font-bold tracking-wider text-muted uppercase">{r.seccion}</p>
+                  <p className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-muted uppercase">{r.seccion}</p>
                 )}
                 <button
                   onMouseEnter={() => setSel(i)}

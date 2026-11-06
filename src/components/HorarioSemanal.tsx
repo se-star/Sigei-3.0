@@ -34,7 +34,7 @@ export function HorarioSemanal({
           <tr>
             <th className="w-24" />
             {dias.map((d) => (
-              <th key={d.valor} scope="col" className="pb-1 text-xs font-bold tracking-wider text-muted uppercase">
+              <th key={d.valor} scope="col" className="pb-1 text-xs font-semibold tracking-wider text-muted uppercase">
                 <span className="hidden sm:inline">{d.largo}</span>
                 <span className="sm:hidden">{d.corto}</span>
               </th>

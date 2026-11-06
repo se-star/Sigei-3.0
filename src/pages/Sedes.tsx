@@ -69,7 +69,7 @@ export default function Sedes() {
                     <Building2 className="size-5" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-display text-lg font-bold">{s.nombre}</h2>
+                    <h2 className="font-display text-lg font-semibold">{s.nombre}</h2>
                     {s.principal && (
                       <Insignia tono="lime">
                         <Star className="size-3" /> Principal
@@ -114,7 +114,7 @@ export default function Sedes() {
                     [sg.reduce((a, g) => a + g.estudiantes, 0), 'estudiantes'],
                   ].map(([v, t]) => (
                     <div key={t}>
-                      <p className="font-display text-xl font-bold tabular-nums">{v}</p>
+                      <p className="font-display text-xl font-semibold tabular-nums">{v}</p>
                       <p className="text-xs text-muted">{t}</p>
                     </div>
                   ))}

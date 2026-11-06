@@ -87,14 +87,14 @@ export function crearDatosDemo() {
   ];
 
   const areaDefs: [string, string, string[]][] = [
-    ['Matemáticas', '#0f766e', ['Matemáticas', 'Geometría', 'Estadística']],
-    ['Humanidades', '#b45309', ['Lengua Castellana', 'Inglés']],
-    ['Ciencias Naturales', '#15803d', ['Biología', 'Química', 'Física']],
-    ['Ciencias Sociales', '#7c3aed', ['Sociales', 'Filosofía', 'Ética y Valores']],
-    ['Tecnología e Informática', '#1d4ed8', ['Tecnología']],
-    ['Educación Artística', '#db2777', ['Artística']],
-    ['Educación Física', '#c2410c', ['Educación Física']],
-    ['Educación Religiosa', '#64748b', ['Religión']],
+    ['Matemáticas', '#4f7a86', ['Matemáticas', 'Geometría', 'Estadística']],
+    ['Humanidades', '#b0784a', ['Lengua Castellana', 'Inglés']],
+    ['Ciencias Naturales', '#6f8f5e', ['Biología', 'Química', 'Física']],
+    ['Ciencias Sociales', '#8f7aa8', ['Sociales', 'Filosofía', 'Ética y Valores']],
+    ['Tecnología e Informática', '#5a77a8', ['Tecnología']],
+    ['Educación Artística', '#b56f86', ['Artística']],
+    ['Educación Física', '#c08a3e', ['Educación Física']],
+    ['Educación Religiosa', '#8a8580', ['Religión']],
   ];
   const areas: Area[] = [];
   const asignaturas: Asignatura[] = [];
