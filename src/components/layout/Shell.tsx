@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
+  ChevronDown,
   CalendarDays,
   Cake,
   ChevronsLeft,
@@ -64,13 +65,13 @@ export function Shell() {
   if (!perfil) return null;
 
   const menu = (mini: boolean) => (
-    <nav className={cx('scrollbar-thin flex-1 overflow-y-auto pb-4', mini ? 'px-2' : 'px-3')} aria-label="Menú principal">
+    <MenuDesplazable mini={mini}>
       {NAVEGACION.map((g) => {
         const items = g.items.filter((i) => ver(i.modulo));
         if (!items.length) return null;
         return (
-          <div key={g.grupo} className={cx('mt-5 first:mt-4', mini && 'mt-3 border-t border-line pt-3 first:border-0')}>
-            {!mini && <p className="mb-1 px-3 text-xs font-medium text-muted">{g.grupo}</p>}
+          <div key={g.grupo} className={cx('mt-4 first:mt-3', mini && 'mt-2 border-t border-line pt-2 first:border-0')}>
+            {!mini && <p className="mb-0.5 px-3 text-xs font-medium text-muted">{g.grupo}</p>}
             <ul className={cx('flex flex-col gap-0.5', mini && 'items-center')}>
               {items.map((i) => (
                 <li key={i.ruta} className={cx(mini && 'w-12')}>
@@ -82,7 +83,7 @@ export function Shell() {
                     className={({ isActive }) =>
                       cx(
                         'flex items-center gap-3 rounded-[20px] text-[15px] transition',
-                        mini ? 'size-12 justify-center' : 'h-10 px-3',
+                        mini ? 'size-11 justify-center' : 'h-9 px-3',
                         isActive ? 'bg-surface-2 font-medium text-ink' : 'text-ink-2 hover:bg-surface-2/60 hover:text-ink',
                       )
                     }
@@ -96,11 +97,11 @@ export function Shell() {
           </div>
         );
       })}
-    </nav>
+    </MenuDesplazable>
   );
 
   const marca = (mini: boolean) => (
-    <NavLink to="/" className={cx('flex items-center gap-2.5 pt-5 pb-4', mini ? 'justify-center' : 'px-5')} aria-label="Ir al inicio">
+    <NavLink to="/" className={cx('flex items-center gap-2.5 pt-4 pb-3', mini ? 'justify-center' : 'px-5')} aria-label="Ir al inicio">
       <Logo className="size-9 shrink-0" />
       {!mini && (
         <span className="min-w-0">
@@ -344,6 +345,52 @@ function MenuUsuario({ nombre, rol, onSalir }: { nombre: string; rol: string; on
             </button>
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Contenedor del menú: si quedan opciones por debajo del borde de la pantalla,
+ * muestra un botón “Más opciones” para que no pasen desapercibidas.
+ */
+function MenuDesplazable({ mini, children }: { mini: boolean; children: ReactNode }) {
+  const ref = useRef<HTMLElement>(null);
+  const [hayMas, setHayMas] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const revisar = () => setHayMas(el.scrollHeight - el.scrollTop - el.clientHeight > 8);
+    revisar();
+    el.addEventListener('scroll', revisar, { passive: true });
+    const ro = new ResizeObserver(revisar);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener('scroll', revisar);
+      ro.disconnect();
+    };
+  }, []);
+
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <nav ref={ref} className={cx('scrollbar-thin flex-1 overflow-y-auto pb-4', mini ? 'px-2' : 'px-3')} aria-label="Menú principal">
+        <div>{children}</div>
+      </nav>
+      {hayMas && (
+        <button
+          onClick={() => ref.current?.scrollBy({ top: ref.current.clientHeight * 0.7, behavior: 'smooth' })}
+          className={cx(
+            'anim-fade absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-line bg-surface text-[13px] text-ink shadow-pop transition hover:bg-surface-2',
+            mini ? 'size-9 justify-center' : 'h-8 px-3.5',
+          )}
+          aria-label="Ver más opciones del menú"
+          title="Más opciones"
+        >
+          {!mini && 'Más opciones'}
+          <ChevronDown className="size-4" />
+        </button>
       )}
     </div>
   );
