@@ -4,7 +4,7 @@ import { Boton, Campo, Entrada } from '@/components/ui';
 import { Logo, Wordmark } from '@/components/layout/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { backend, modoDemo } from '@/lib/backend';
+import { backend, modoDemo, servidorDatos } from '@/lib/backend';
 import type { Rol } from '@/lib/types';
 import { cx } from '@/lib/utils';
 
@@ -30,7 +30,10 @@ export default function Login() {
           </p>
         </div>
         <div className="anim-rise card mt-10 w-full max-w-md p-6 sm:p-8">{modoDemo ? <AccesoDemo /> : <AccesoNube />}</div>
-        <p className="mt-10 text-[13px] text-muted">© {new Date().getFullYear()} SIGEI · Versión 3.0</p>
+        <p className="mt-10 text-[13px] text-muted">
+          © {new Date().getFullYear()} SIGEI · Versión 3.0
+          {servidorDatos && <span className="block text-center text-xs">Servidor de datos: {servidorDatos}</span>}
+        </p>
       </div>
     </div>
   );

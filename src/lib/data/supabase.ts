@@ -1,12 +1,25 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Actividad, ID, Nuevo, Perfil, Tabla, Tablas } from '../types';
 import type { AuthProvider, DataProvider, Sesion } from './provider';
+import { esErrorDeRed, hostDe, mensajeSinConexion } from './conexion';
 
 /**
  * Modo nube: Supabase (PostgreSQL + Auth). El esquema, las políticas RLS y los
  * disparadores de auditoría están en supabase/migrations.
  */
+let host = '';
+
+/** Convierte errores de red en un mensaje claro en español. */
+function traducir(e: unknown): Error {
+  if (esErrorDeRed(e)) return new Error(mensajeSinConexion(host));
+  const msg = String((e as { message?: string })?.message ?? e);
+  if (/invalid api key|no api key/i.test(msg))
+    return new Error('La clave guardada en VITE_SUPABASE_ANON_KEY no es válida para este proyecto. Copie de nuevo la clave publishable o anon.');
+  return e instanceof Error ? e : new Error(String((e as { message?: string })?.message ?? e));
+}
+
 export function crearCliente(url: string, anonKey: string): SupabaseClient {
+  host = hostDe(url);
   return createClient(url, anonKey, {
     auth: {
       persistSession: true,
@@ -20,6 +33,7 @@ export function crearCliente(url: string, anonKey: string): SupabaseClient {
 
 function fallo(error: { message: string; code?: string } | null): asserts error is null {
   if (!error) return;
+  if (esErrorDeRed(error)) throw traducir(error);
   if (error.code === '42501') throw new Error('No tiene permisos para realizar esta acción.');
   if (error.code === '23505') throw new Error('Ya existe un registro con esos datos.');
   if (error.code === '23503') throw new Error('Este registro está relacionado con otros datos y no se puede eliminar.');
@@ -148,6 +162,7 @@ export class SupabaseAuthProvider implements AuthProvider {
   async ingresar(email: string, clave: string): Promise<Sesion> {
     const { data, error } = await this.sb.auth.signInWithPassword({ email, password: clave });
     if (error) {
+      if (esErrorDeRed(error) || /api key/i.test(error.message)) throw traducir(error);
       if (error.message.includes('Invalid login')) throw new Error('Correo o contraseña incorrectos.');
       if (error.message.includes('Email not confirmed')) throw new Error('Debe confirmar su correo antes de ingresar.');
       throw new Error(error.message);
@@ -163,12 +178,15 @@ export class SupabaseAuthProvider implements AuthProvider {
       password: clave,
       options: { data: { nombre }, emailRedirectTo: urlDeRetorno() },
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.message.toLowerCase().includes('already registered')) throw new Error('Ya existe una cuenta con ese correo. Use “Ingresar” o recupere su contraseña.');
+      throw traducir(error);
+    }
   }
 
   async recuperarClave(email: string) {
     const { error } = await this.sb.auth.resetPasswordForEmail(email, { redirectTo: urlDeRetorno() });
-    if (error) throw new Error(error.message);
+    if (error) throw traducir(error);
   }
 
   async salir() {

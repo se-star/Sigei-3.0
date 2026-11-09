@@ -1,13 +1,18 @@
 import type { AuthProvider, DataProvider } from './data/provider';
 import { LocalAuthProvider, LocalDataProvider } from './data/local';
 import { SupabaseAuthProvider, SupabaseDataProvider, crearCliente } from './data/supabase';
+import { hostDe, normalizarUrlSupabase } from './data/conexion';
 
 /**
  * Elige el backend al arrancar: Supabase si hay credenciales en las variables de
  * entorno; de lo contrario, modo demo en el navegador.
  */
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const urlCruda = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim();
+const key = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim().replace(/^["']|["']$/g, '');
+const url = urlCruda ? normalizarUrlSupabase(urlCruda) : undefined;
+
+/** Servidor de datos en uso (vacío en modo demo). La dirección de Supabase es pública. */
+export const servidorDatos = url ? hostDe(url) : '';
 
 let nombreUsuario = 'Sistema';
 export function fijarUsuarioActual(nombre: string) {
