@@ -6,6 +6,7 @@ import {
   Clock3,
   FileBarChart2,
   History,
+  Landmark,
   LayoutDashboard,
   ListTodo,
   Megaphone,
@@ -64,6 +65,10 @@ export const NAVEGACION: { grupo: string; items: ItemNav[] }[] = [
       { ruta: '/actividad', etiqueta: 'Actividad', icono: History, modulo: 'actividad', descripcion: 'Registro de cambios' },
       { ruta: '/configuracion', etiqueta: 'Configuración', icono: Settings, modulo: 'configuracion', descripcion: 'Institución y respaldos' },
     ],
+  },
+  {
+    grupo: 'Plataforma',
+    items: [{ ruta: '/instituciones', etiqueta: 'Instituciones', icono: Landmark, modulo: 'instituciones', descripcion: 'Todas las instituciones de SIGEI' }],
   },
 ];
 

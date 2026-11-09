@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Bell, Clock3, LogOut, Monitor, Moon, Sun, UserRound } from 'lucide-react';
 import { Avatar, Boton, Encabezado, Insignia, Tarjeta } from '@/components/ui';
 import { FormClave } from '@/components/formularios/FormClave';
+import { SolicitarAcceso } from '@/components/SolicitarAcceso';
 import { useAuth } from '@/hooks/useAuth';
 import { useTema, type Tema } from '@/hooks/useTema';
 import { useTabla } from '@/hooks/useDatos';
@@ -10,7 +11,7 @@ import { etiqueta, ROLES, tono } from '@/lib/catalogos';
 import { cx, nombreDocente } from '@/lib/utils';
 
 export default function Perfil() {
-  const { perfil, salir } = useAuth();
+  const { perfil, instituciones, salir } = useAuth();
   const { tema, setTema } = useTema();
   const { data: docentes = [] } = useTabla('docentes');
   if (!perfil) return null;
@@ -31,8 +32,9 @@ export default function Perfil() {
             <div className="min-w-0">
               <p className="truncate font-display text-xl font-semibold">{perfil.nombre}</p>
               <p className="truncate text-sm text-muted">{perfil.email}</p>
-              <div className="mt-2">
-                <Insignia tono={tono(ROLES, perfil.rol)}>{etiqueta(ROLES, perfil.rol)}</Insignia>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {perfil.es_superadmin && <Insignia tono="violet">Superadministrador</Insignia>}
+                {perfil.activo && <Insignia tono={tono(ROLES, perfil.rol)}>{etiqueta(ROLES, perfil.rol)}</Insignia>}
               </div>
             </div>
           </div>
@@ -64,8 +66,30 @@ export default function Perfil() {
             <Boton variante="secundario" className="text-danger" icono={<LogOut className="size-4" />} onClick={salir}>
               Cerrar sesión
             </Boton>
-
           </div>
+        </Tarjeta>
+        <Tarjeta titulo="Mis instituciones" className="md:col-span-2">
+          {instituciones.length === 0 ? (
+            <p className="mb-4 text-sm text-muted">Aún no está vinculado a ninguna institución.</p>
+          ) : (
+            <ul className="mb-5 grid gap-2 sm:grid-cols-2">
+              {instituciones.map((i) => (
+                <li key={i.id} className="flex items-center justify-between gap-3 rounded-[20px] bg-surface-2 px-4 py-3">
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{i.nombre}</span>
+                    <span className="block text-xs text-muted">{i.activo ? etiqueta(ROLES, i.rol) : 'Solicitud pendiente'}</span>
+                  </span>
+                  {i.id === perfil.institucion_id ? <Insignia tono="lime">Actual</Insignia> : !i.activo && <Insignia tono="warn">Pendiente</Insignia>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {!perfil.es_superadmin && (
+            <>
+              <p className="mb-2 text-sm font-medium">¿Trabaja en otra institución?</p>
+              <SolicitarAcceso />
+            </>
+          )}
         </Tarjeta>
         {!modoDemo && (
           <Tarjeta titulo="Cambiar contraseña" className="md:col-start-1">

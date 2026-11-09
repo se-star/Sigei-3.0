@@ -32,11 +32,20 @@ También incluye:
 - **Centro de notificaciones**: solicitudes por aprobar, eventos de hoy y mañana, comunicados nuevos, cumpleaños y tareas vencidas.
 - **Tema claro, oscuro o automático.**
 
-### Roles
+### Varias instituciones
+
+SIGEI es una plataforma compartida: varias instituciones educativas trabajan en el mismo sitio y la misma base de datos, y cada una ve **solo sus propios datos**.
+
+- **Superadministrador** (la primera cuenta de la plataforma): crea instituciones, nombra a sus administradores, ve indicadores de todas y puede entrar a cualquiera desde *Instituciones*.
+- **Una persona, varias instituciones**: una sola cuenta puede tener un rol distinto en cada institución (por ejemplo, coordinación en una y docente en otra). Se cambia de institución desde el selector bajo el logotipo.
+- **Acceso**: al registrarse, la persona elige su institución y queda pendiente hasta que el administrador de esa institución la active. Desde *Mi perfil* puede pedir acceso a otras.
+- La separación se aplica en la base de datos: las políticas RLS impiden leer o escribir datos de otra institución, e incluso relacionar registros entre instituciones.
+
+### Roles (dentro de cada institución)
 
 | Rol | Alcance |
 | --- | --- |
-| Administrador | Todo, incluidos los usuarios y la configuración. |
+| Administrador | Todo en su institución, incluidos los usuarios y la configuración. |
 | Rectoría | Gestión institucional, aprobaciones, sedes, configuración y actividad. |
 | Coordinación | Docentes, grupos, horarios, novedades, seguimiento, calendario y comunicados. |
 | Docente | Consulta, su propio horario, radicación de sus novedades y tareas. |
@@ -54,12 +63,14 @@ npm install
 npm run dev
 ```
 
-Abra la dirección que aparece en la terminal y elija un rol. Sin credenciales de Supabase, SIGEI arranca en **modo demo**: carga datos ficticios y guarda los cambios **solo en ese navegador**. Puede restablecerlos en *Configuración → Respaldo*.
+Abra la dirección que aparece en la terminal y elija un rol. El modo demo trae dos colegios de ejemplo: el superadministrador ve ambos, y la coordinadora y la docente de ejemplo trabajan en los dos. Sin credenciales de Supabase, SIGEI arranca en **modo demo**: carga datos ficticios y guarda los cambios **solo en ese navegador**. Puede restablecerlos en *Configuración → Respaldo*.
 
 ## Conectar Supabase (datos reales e inicio de sesión)
 
 1. Cree un proyecto gratuito en [supabase.com](https://supabase.com).
-2. En **SQL Editor**, abra una consulta nueva, pegue todo el contenido de `supabase/migrations/0001_esquema_inicial.sql` y ejecútelo. Eso crea las tablas, las reglas de seguridad por rol y la auditoría.
+2. En **SQL Editor** ejecute, en orden y cada uno en una consulta nueva, los archivos de `supabase/migrations/`:
+   1. `0001_esquema_inicial.sql`: tablas, seguridad y auditoría.
+   2. `0002_multiples_instituciones.sql`: varias instituciones en la misma plataforma. Si su proyecto ya tenía datos, la institución existente pasa a ser la primera y no se pierde nada.
 3. En **Project Settings → API**, copie la *Project URL* y la *anon public key*.
 4. Copie `.env.example` como `.env.local` y complete:
    ```
@@ -67,9 +78,9 @@ Abra la dirección que aparece en la terminal y elija un rol. Sin credenciales d
    VITE_SUPABASE_ANON_KEY=eyJ...
    ```
 5. Ejecute `npm run dev` y use **Solicitar acceso** para crear su cuenta.
-   - **La primera cuenta registrada queda como Administrador activo.**
-   - Las siguientes quedan pendientes hasta que un administrador las active en *Usuarios y roles*.
-6. Opcional: para empezar con datos, descargue un respaldo desde el modo demo y restáurelo en *Configuración → Respaldo*.
+   - **La primera cuenta registrada queda como superadministrador** de la plataforma.
+   - Las siguientes eligen su institución al registrarse y quedan pendientes hasta que el administrador de esa institución las active en *Usuarios y roles*.
+6. Opcional: para empezar con datos, descargue un respaldo desde el modo demo y cárguelo en *Configuración → Respaldo*. Los registros se copian con identificadores nuevos, así que el mismo respaldo sirve para varias instituciones.
 
 > En **Authentication → URL Configuration** ponga como *Site URL* la dirección publicada (por ejemplo `https://se-star.github.io/Sigei-3.0/`) y agréguela también en *Redirect URLs*, junto con `http://localhost:5173/` si va a trabajar en local. Así funcionan los correos de confirmación y de recuperación de contraseña. Quien llega desde el enlace de recuperación ve una pantalla para crear su contraseña nueva; con sesión iniciada también se puede cambiar desde *Mi perfil*.
 

@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowDown, ArrowUp, Coffee, DatabaseBackup, Download, Plus, RotateCcw, Save, Trash2, Upload } from 'lucide-react';
 import { Boton, Campo, Encabezado, Entrada, Segmentos, Tarjeta } from '@/components/ui';
-import { useAjustes, useMutar, useTabla, AJUSTES_VACIOS } from '@/hooks/useDatos';
+import { useAjustes, useMutar, useTabla } from '@/hooks/useDatos';
 import { useAuth } from '@/hooks/useAuth';
 import { useConfirmar } from '@/hooks/useConfirmar';
 import { useToast } from '@/hooks/useToast';
 import { backend, modoDemo } from '@/lib/backend';
-import { reiniciarDemo } from '@/lib/data/local';
+import { reiniciarDemo, uid } from '@/lib/data/local';
+import { copiarConIdsNuevos } from '@/lib/data/respaldo';
 import { TABLAS_RESPALDO } from '@/lib/data/provider';
 import type { Ajustes, Franja, Tabla, Tablas } from '@/lib/types';
 import { cx, descargarArchivo, hoyISO } from '@/lib/utils';
@@ -44,18 +45,24 @@ export default function Configuracion() {
   );
 }
 
-/** Guarda la fila única de ajustes (la crea si no existe). */
+/** Guarda la configuración de la institución actual. */
 function useGuardarAjustes() {
-  const { data } = useTabla('ajustes');
-  const { crear, editar } = useMutar('ajustes');
+  const ajustes = useAjustes();
+  const { editar } = useMutar('instituciones');
+  const { refrescar } = useAuth();
   const toast = useToast();
   return {
-    pendiente: crear.isPending || editar.isPending,
+    pendiente: editar.isPending,
     guardar: async (cambios: Partial<Ajustes>) => {
       try {
-        const fila = data?.[0];
-        if (fila) await editar.mutateAsync({ id: fila.id, cambios });
-        else await crear.mutateAsync({ ...AJUSTES_VACIOS, ...cambios, id: 'ajustes' });
+        const { id: _i, activa: _a, created_at: _c, updated_at: _u, ...resto } = cambios;
+        void _i;
+        void _a;
+        void _c;
+        void _u;
+        await editar.mutateAsync({ id: ajustes.id, cambios: resto });
+        // El nombre y la sigla aparecen en el menú y en el selector de instituciones.
+        if ('nombre' in resto || 'sigla' in resto) await refrescar();
         toast.ok('Configuración guardada.');
       } catch (e) {
         toast.error(e);
@@ -84,7 +91,7 @@ function Institucion() {
   return (
     <Tarjeta titulo="Datos institucionales" className="max-w-3xl">
       <div className="grid gap-4 sm:grid-cols-2">
-        {campo('institucion', 'Nombre de la institución', { col: true })}
+        {campo('nombre', 'Nombre de la institución', { col: true })}
         {campo('sigla', 'Sigla')}
         {campo('municipio', 'Municipio')}
         {campo('codigo_dane', 'Código DANE')}
@@ -94,7 +101,7 @@ function Institucion() {
         {campo('periodos', 'Número de períodos académicos', { tipo: 'number' })}
       </div>
       <div className="mt-6 flex justify-end">
-        <Boton icono={<Save className="size-4" />} cargando={pendiente} onClick={() => guardar({ ...v, id: undefined } as Partial<Ajustes>)}>
+        <Boton icono={<Save className="size-4" />} cargando={pendiente} onClick={() => guardar(v)}>
           Guardar cambios
         </Boton>
       </div>
@@ -321,6 +328,7 @@ function Rubrica() {
 }
 
 function Respaldo() {
+  const ajustes = useAjustes();
   const qc = useQueryClient();
   const toast = useToast();
   const confirmar = useConfirmar();
@@ -330,9 +338,10 @@ function Respaldo() {
   const exportar = async () => {
     setTrabajando(true);
     try {
-      const datos: Record<string, unknown> = { sigei: '3.0', exportado: new Date().toISOString() };
+      const datos: Record<string, unknown> = { sigei: '3.0', exportado: new Date().toISOString(), ajustes: [ajustes] };
       for (const t of TABLAS_RESPALDO) datos[t] = await backend.datos.list(t);
-      descargarArchivo(`sigei-respaldo-${hoyISO()}.json`, JSON.stringify(datos, null, 2), 'application/json');
+      const nombre = (ajustes.sigla || ajustes.nombre).toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-');
+      descargarArchivo(`sigei-${nombre}-${hoyISO()}.json`, JSON.stringify(datos, null, 2), 'application/json');
       toast.ok('Respaldo descargado.');
     } catch (e) {
       toast.error(e);
@@ -351,14 +360,23 @@ function Respaldo() {
     }
     const resumen = TABLAS_RESPALDO.filter((t) => Array.isArray(datos[t])).map((t) => `${(datos[t] as unknown[]).length} ${t}`);
     const ok = await confirmar({
-      titulo: 'Restaurar respaldo',
-      texto: `Se agregarán o actualizarán: ${resumen.join(', ')}. Los registros con el mismo identificador se sobrescriben.`,
-      confirmar: 'Restaurar',
+      titulo: `Cargar respaldo en ${ajustes.sigla || ajustes.nombre}`,
+      texto: `Se agregarán como registros nuevos de esta institución: ${resumen.join(', ')}. Los datos que ya existen no se modifican.`,
+      confirmar: 'Cargar',
     });
     if (!ok) return;
     setTrabajando(true);
     try {
-      for (const t of TABLAS_RESPALDO) if (Array.isArray(datos[t])) await backend.datos.bulkUpsert(t as Tabla, datos[t] as Tablas[Tabla][]);
+      const copia = copiarConIdsNuevos(datos, uid);
+      for (const t of TABLAS_RESPALDO) if (copia[t]?.length) await backend.datos.bulkUpsert(t, copia[t] as unknown as Tablas[Tabla][]);
+      // De la configuración se toman las franjas, la rúbrica y los períodos (no el nombre).
+      const cfg = (datos.ajustes as Partial<Ajustes>[] | undefined)?.[0];
+      if (cfg && ajustes.id)
+        await backend.datos.update('instituciones', ajustes.id, {
+          ...(cfg.franjas?.length ? { franjas: cfg.franjas } : {}),
+          ...(cfg.criterios_seguimiento?.length ? { criterios_seguimiento: cfg.criterios_seguimiento } : {}),
+          ...(cfg.periodos ? { periodos: cfg.periodos } : {}),
+        });
       await qc.invalidateQueries();
       toast.ok('Respaldo restaurado.');
     } catch (e) {
@@ -371,13 +389,13 @@ function Respaldo() {
   return (
     <div className="grid max-w-4xl gap-4 md:grid-cols-2">
       <Tarjeta titulo="Descargar respaldo" icono={<Download className="size-4" />}>
-        <p className="mb-4 text-sm text-muted">Guarda toda la información institucional en un archivo JSON. Recomendado al cierre de cada período.</p>
+        <p className="mb-4 text-sm text-muted">Guarda la información de esta institución en un archivo JSON. Recomendado al cierre de cada período.</p>
         <Boton icono={<DatabaseBackup className="size-4" />} onClick={exportar} cargando={trabajando}>
           Descargar respaldo
         </Boton>
       </Tarjeta>
       <Tarjeta titulo="Restaurar respaldo" icono={<Upload className="size-4" />}>
-        <p className="mb-4 text-sm text-muted">Carga un archivo generado por SIGEI 3.0. Los usuarios y el registro de actividad no se incluyen.</p>
+        <p className="mb-4 text-sm text-muted">Carga un archivo de SIGEI 3.0 en esta institución, como registros nuevos. Sirve también para copiar datos de otra institución. Los usuarios y el registro de actividad no se incluyen.</p>
         <input ref={archivo} type="file" accept="application/json,.json" hidden onChange={(e) => (e.target.files?.[0] && importar(e.target.files[0]), (e.target.value = ''))} />
         <Boton variante="secundario" icono={<Upload className="size-4" />} onClick={() => archivo.current?.click()} cargando={trabajando}>
           Elegir archivo

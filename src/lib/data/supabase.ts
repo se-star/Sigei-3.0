@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { Actividad, ID, Nuevo, Perfil, Tabla, Tablas } from '../types';
-import type { AuthProvider, DataProvider, Sesion } from './provider';
+import type { Actividad, ID, MiInstitucion, Miembro, Nuevo, ResumenInstitucion, Rol, Tabla, Tablas } from '../types';
+import { TABLAS_INSTITUCIONALES } from '../types';
+import { armarSesion, institucionGuardada, type AuthProvider, type DataProvider, type InstitucionPublica, type Sesion } from './provider';
 import { esErrorDeRed, hostDe, mensajeSinConexion } from './conexion';
 
 /**
@@ -37,43 +38,67 @@ function fallo(error: { message: string; code?: string } | null): asserts error 
   if (error.code === '42501') throw new Error('No tiene permisos para realizar esta acción.');
   if (error.code === '23505') throw new Error('Ya existe un registro con esos datos.');
   if (error.code === '23503') throw new Error('Este registro está relacionado con otros datos y no se puede eliminar.');
+  if (error.code === '42P01' || /relation .* does not exist|Could not find the table/i.test(error.message))
+    throw new Error('La base de datos no está actualizada. Ejecute en Supabase la migración más reciente (supabase/migrations).');
   throw new Error(error.message);
 }
 
+const esInstitucional = (t: string) => (TABLAS_INSTITUCIONALES as readonly string[]).includes(t);
+
 export class SupabaseDataProvider implements DataProvider {
   readonly modo = 'supabase' as const;
+  private inst: ID | null = null;
   constructor(private sb: SupabaseClient) {}
 
+  fijarInstitucion(id: ID | null) {
+    this.inst = id;
+  }
+
+  private exigirInstitucion(): ID {
+    if (!this.inst) throw new Error('Elija una institución para continuar.');
+    return this.inst;
+  }
+
   async list<T extends Tabla>(tabla: T): Promise<Tablas[T][]> {
-    const { data, error } = await this.sb.from(tabla).select('*').order('created_at', { ascending: true });
+    let q = this.sb.from(tabla).select('*');
+    if (esInstitucional(tabla)) q = q.eq('institucion_id', this.exigirInstitucion());
+    const { data, error } = await q.order('created_at', { ascending: true });
     fallo(error);
     return (data ?? []) as Tablas[T][];
   }
 
   async create<T extends Tabla>(tabla: T, datos: Nuevo<Tablas[T]>): Promise<Tablas[T]> {
-    const { data, error } = await this.sb.from(tabla).insert(datos).select().single();
+    const fila = esInstitucional(tabla) ? { ...datos, institucion_id: this.exigirInstitucion() } : datos;
+    const { data, error } = await this.sb.from(tabla).insert(fila).select().single();
     fallo(error);
     return data as Tablas[T];
   }
 
   async update<T extends Tabla>(tabla: T, id: ID, cambios: Partial<Tablas[T]>): Promise<Tablas[T]> {
-    const { id: _ignorado, created_at: _c, updated_at: _u, ...resto } = cambios as Record<string, unknown>;
-    void _ignorado;
+    const { id: _i, created_at: _c, updated_at: _u, institucion_id: _n, ...resto } = cambios as Record<string, unknown>;
+    void _i;
     void _c;
     void _u;
-    const { data, error } = await this.sb.from(tabla).update(resto).eq('id', id).select().single();
+    void _n;
+    let q = this.sb.from(tabla).update(resto).eq('id', id);
+    if (esInstitucional(tabla)) q = q.eq('institucion_id', this.exigirInstitucion());
+    const { data, error } = await q.select().single();
     fallo(error);
     return data as Tablas[T];
   }
 
   async remove(tabla: Tabla, id: ID): Promise<void> {
-    const { error } = await this.sb.from(tabla).delete().eq('id', id);
+    let q = this.sb.from(tabla).delete().eq('id', id);
+    if (esInstitucional(tabla)) q = q.eq('institucion_id', this.exigirInstitucion());
+    const { error } = await q;
     fallo(error);
   }
 
   async bulkUpsert<T extends Tabla>(tabla: T, filas: Tablas[T][]): Promise<void> {
-    for (let i = 0; i < filas.length; i += 500) {
-      const { error } = await this.sb.from(tabla).upsert(filas.slice(i, i + 500));
+    const inst = esInstitucional(tabla) ? this.exigirInstitucion() : null;
+    const marcadas = inst ? filas.map((f) => ({ ...f, institucion_id: inst })) : filas;
+    for (let i = 0; i < marcadas.length; i += 500) {
+      const { error } = await this.sb.from(tabla).upsert(marcadas.slice(i, i + 500));
       fallo(error);
     }
   }
@@ -82,10 +107,65 @@ export class SupabaseDataProvider implements DataProvider {
     const { data, error } = await this.sb
       .from('actividad')
       .select('*')
+      .eq('institucion_id', this.exigirInstitucion())
       .order('created_at', { ascending: false })
       .limit(limite);
     fallo(error);
     return (data ?? []) as Actividad[];
+  }
+
+  async miembros(): Promise<Miembro[]> {
+    const { data, error } = await this.sb
+      .from('membresias')
+      .select('usuario_id, rol, docente_id, activo, perfiles(nombre, email)')
+      .eq('institucion_id', this.exigirInstitucion());
+    fallo(error);
+    type Fila = { usuario_id: ID; rol: Rol; docente_id: ID | null; activo: boolean; perfiles: { nombre: string; email: string } | null };
+    return ((data ?? []) as unknown as Fila[]).map((m) => ({
+      id: m.usuario_id,
+      nombre: m.perfiles?.nombre ?? '—',
+      email: m.perfiles?.email ?? '',
+      rol: m.rol,
+      docente_id: m.docente_id,
+      activo: m.activo,
+    }));
+  }
+
+  async actualizarMiembro(usuarioId: ID, cambios: Partial<Pick<Miembro, 'rol' | 'docente_id' | 'activo'>>) {
+    const { error } = await this.sb
+      .from('membresias')
+      .update(cambios)
+      .eq('usuario_id', usuarioId)
+      .eq('institucion_id', this.exigirInstitucion());
+    fallo(error);
+  }
+
+  async quitarMiembro(usuarioId: ID) {
+    const { error } = await this.sb.from('membresias').delete().eq('usuario_id', usuarioId).eq('institucion_id', this.exigirInstitucion());
+    fallo(error);
+  }
+
+  async agregarMiembro(correo: string, rol: Rol) {
+    return this.agregarMiembroEn(this.exigirInstitucion(), correo, rol);
+  }
+
+  async agregarMiembroEn(institucionId: ID, correo: string, rol: Rol): Promise<'agregado' | 'no_registrado'> {
+    const { data, error } = await this.sb.rpc('agregar_miembro', { inst: institucionId, correo, nuevo_rol: rol });
+    fallo(error);
+    return data as 'agregado' | 'no_registrado';
+  }
+
+  async resumenInstituciones(): Promise<ResumenInstitucion[]> {
+    const { data, error } = await this.sb.rpc('resumen_instituciones');
+    fallo(error);
+    return ((data ?? []) as ResumenInstitucion[]).map((r) => ({
+      ...r,
+      docentes: Number(r.docentes),
+      grupos: Number(r.grupos),
+      estudiantes: Number(r.estudiantes),
+      usuarios: Number(r.usuarios),
+      pendientes: Number(r.pendientes),
+    }));
   }
 }
 
@@ -127,15 +207,34 @@ export class SupabaseAuthProvider implements AuthProvider {
     this.recuperando = false;
   }
 
-  private async perfilDe(userId: string): Promise<Sesion | null> {
-    const { data, error } = await this.sb.from('perfiles').select('*').eq('id', userId).maybeSingle();
-    if (error || !data) return null;
-    const perfil = data as Perfil;
-    if (!perfil.activo) {
-      await this.sb.auth.signOut();
-      throw new Error('Su cuenta aún no ha sido activada o fue desactivada. Comuníquese con la administración.');
+  /** Arma la sesión: perfil global + instituciones con su rol en cada una. */
+  private async perfilDe(userId: string, preferida?: ID | null): Promise<Sesion | null> {
+    const { data: p, error } = await this.sb.from('perfiles').select('id, nombre, email, es_superadmin').eq('id', userId).maybeSingle();
+    if (error) {
+      if (/column .*es_superadmin|does not exist/i.test(error.message))
+        throw new Error('La base de datos no está actualizada. Ejecute en Supabase la migración 0002_multiples_instituciones.sql.');
+      throw traducir(error);
     }
-    return { perfil };
+    if (!p) return null;
+    const { data: ms, error: e2 } = await this.sb
+      .from('membresias')
+      .select('institucion_id, rol, docente_id, activo, instituciones(nombre, sigla, activa)')
+      .eq('usuario_id', userId);
+    if (e2) throw traducir(e2);
+    type Fila = { institucion_id: ID; rol: Rol; docente_id: ID | null; activo: boolean; instituciones: { nombre: string; sigla: string; activa: boolean } | null };
+    const mias = (ms ?? []) as unknown as Fila[];
+    let lista: (MiInstitucion & { docente_id: ID | null })[] = mias
+      .filter((m) => m.instituciones && (m.instituciones.activa || p.es_superadmin))
+      .map((m) => ({ id: m.institucion_id, nombre: m.instituciones!.nombre, sigla: m.instituciones!.sigla, rol: m.rol, docente_id: m.docente_id, activo: m.activo }));
+    if (p.es_superadmin) {
+      // El superadministrador puede entrar a todas, como administrador si no tiene otro rol.
+      const { data: todas } = await this.sb.from('instituciones').select('id, nombre, sigla').order('nombre');
+      lista = (todas ?? []).map((i) => {
+        const m = lista.find((x) => x.id === i.id);
+        return { id: i.id, nombre: i.nombre, sigla: i.sigla, rol: m && m.activo ? m.rol : 'admin', docente_id: m?.docente_id ?? null, activo: true };
+      });
+    }
+    return armarSesion(p, lista, preferida ?? institucionGuardada(userId));
   }
 
   async sesionActual(): Promise<Sesion | null> {
@@ -172,11 +271,40 @@ export class SupabaseAuthProvider implements AuthProvider {
     return sesion;
   }
 
-  async registrarse(nombre: string, email: string, clave: string) {
+  private async usuarioId(): Promise<ID> {
+    const { data } = await this.sb.auth.getSession();
+    if (!data.session) throw new Error('Su sesión terminó. Ingrese de nuevo.');
+    return data.session.user.id;
+  }
+
+  async cambiarInstitucion(id: ID): Promise<Sesion> {
+    const s = await this.perfilDe(await this.usuarioId(), id);
+    if (!s || s.perfil.institucion_id !== id) throw new Error('No tiene acceso a esa institución.');
+    return s;
+  }
+
+  async refrescar() {
+    const { data } = await this.sb.auth.getSession();
+    return data.session ? this.perfilDe(data.session.user.id) : null;
+  }
+
+  async institucionesPublicas(): Promise<InstitucionPublica[]> {
+    const { data, error } = await this.sb.rpc('instituciones_publicas');
+    if (error) throw traducir(error);
+    return (data ?? []) as InstitucionPublica[];
+  }
+
+  async solicitarAcceso(institucionId: ID) {
+    const { error } = await this.sb.from('membresias').insert({ usuario_id: await this.usuarioId(), institucion_id: institucionId });
+    if (error?.code === '23505') throw new Error('Ya tiene acceso o una solicitud pendiente en esa institución.');
+    fallo(error);
+  }
+
+  async registrarse(nombre: string, email: string, clave: string, institucionId?: ID) {
     const { error } = await this.sb.auth.signUp({
       email,
       password: clave,
-      options: { data: { nombre }, emailRedirectTo: urlDeRetorno() },
+      options: { data: { nombre, institucion_id: institucionId ?? '' }, emailRedirectTo: urlDeRetorno() },
     });
     if (error) {
       if (error.message.toLowerCase().includes('already registered')) throw new Error('Ya existe una cuenta con ese correo. Use “Ingresar” o recupere su contraseña.');

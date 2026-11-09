@@ -26,6 +26,8 @@ const Sedes = lazy(() => import('./pages/Sedes'));
 const Actividad = lazy(() => import('./pages/Actividad'));
 const Configuracion = lazy(() => import('./pages/Configuracion'));
 const Perfil = lazy(() => import('./pages/Perfil'));
+const Instituciones = lazy(() => import('./pages/Instituciones'));
+const SinInstitucion = lazy(() => import('./pages/SinInstitucion'));
 
 function Protegida({ modulo, children }: { modulo: Modulo; children: ReactNode }) {
   const { ver } = useAuth();
@@ -51,6 +53,27 @@ export default function App() {
   if (!perfil) return <Login />;
   if (recuperando) return <NuevaClave />;
 
+  // Sin ninguna institución activa: el superadministrador va a su panel; los demás, a pedir acceso.
+  if (!perfil.activo) {
+    if (!perfil.es_superadmin)
+      return (
+        <Suspense fallback={<Cargando />}>
+          <SinInstitucion />
+        </Suspense>
+      );
+    return (
+      <Suspense fallback={<Cargando />}>
+        <Routes>
+          <Route element={<Shell />}>
+            <Route path="instituciones" element={<Instituciones />} />
+            <Route path="perfil" element={<Perfil />} />
+            <Route path="*" element={<Navigate to="/instituciones" replace />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    );
+  }
+
   const r = (modulo: Modulo, el: ReactNode) => <Protegida modulo={modulo}>{el}</Protegida>;
 
   return (
@@ -74,6 +97,7 @@ export default function App() {
           <Route path="actividad" element={r('actividad', <Actividad />)} />
           <Route path="configuracion" element={r('configuracion', <Configuracion />)} />
           <Route path="perfil" element={<Perfil />} />
+          <Route path="instituciones" element={r('instituciones', <Instituciones />)} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

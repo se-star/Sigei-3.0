@@ -122,7 +122,7 @@ export default function Inicio() {
           {saludo()}, {primerNombre}
         </h1>
         <p className="mt-3 max-w-xl text-[16px] text-ink-2">
-          {ajustes.institucion} · Año lectivo {ajustes.anio_lectivo}
+          {ajustes.nombre} · Año lectivo {ajustes.anio_lectivo}
           {ausentes.length > 0 && ` · ${ausentes.length} ${ausentes.length === 1 ? 'docente ausente hoy' : 'docentes ausentes hoy'}`}
         </p>
         <div className="mt-7 flex w-full justify-center">

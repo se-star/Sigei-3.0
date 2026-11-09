@@ -8,14 +8,53 @@ export interface Base {
   id: ID;
   created_at?: string;
   updated_at?: string;
+  /** Institución a la que pertenece el registro (la asigna la capa de datos). */
+  institucion_id?: ID;
 }
 
-export interface Perfil extends Base {
+/**
+ * Usuario con sesión, visto desde la institución en la que está trabajando:
+ * rol, docente vinculado y estado corresponden a esa institución.
+ */
+export interface Perfil {
+  id: ID;
+  nombre: string;
+  email: string;
+  es_superadmin: boolean;
+  /** Institución actual ('' si todavía no tiene ninguna activa). */
+  institucion_id: ID;
+  rol: Rol;
+  docente_id: ID | null;
+  activo: boolean;
+}
+
+/** Persona vinculada a la institución actual (para Usuarios y roles, Tareas…). */
+export interface Miembro {
+  id: ID; // id del usuario
   nombre: string;
   email: string;
   rol: Rol;
   docente_id: ID | null;
   activo: boolean;
+}
+
+/** Institución a la que el usuario tiene acceso o ha pedido acceso. */
+export interface MiInstitucion {
+  id: ID;
+  nombre: string;
+  sigla: string;
+  rol: Rol;
+  /** false = solicitud pendiente de aprobación. */
+  activo: boolean;
+}
+
+export interface ResumenInstitucion {
+  institucion_id: ID;
+  docentes: number;
+  grupos: number;
+  estudiantes: number;
+  usuarios: number;
+  pendientes: number;
 }
 
 export interface Sede extends Base {
@@ -191,8 +230,10 @@ export interface Actividad {
   resumen: string;
 }
 
-export interface Ajustes extends Base {
-  institucion: string;
+/** Institución educativa y su configuración. */
+export interface Institucion extends Base {
+  nombre: string;
+  activa: boolean;
   sigla: string;
   codigo_dane: string;
   nit: string;
@@ -205,6 +246,9 @@ export interface Ajustes extends Base {
   criterios_seguimiento: string[];
 }
 
+/** Configuración institucional (alias histórico). */
+export type Ajustes = Institucion;
+
 export interface Franja {
   inicio: string;
   fin: string;
@@ -213,7 +257,7 @@ export interface Franja {
 
 /** Mapa tabla → tipo de registro. */
 export interface Tablas {
-  perfiles: Perfil;
+  instituciones: Institucion;
   sedes: Sede;
   areas: Area;
   asignaturas: Asignatura;
@@ -227,8 +271,24 @@ export interface Tablas {
   eventos: Evento;
   comunicados: Comunicado;
   tareas: Tarea;
-  ajustes: Ajustes;
 }
+
+/** Tablas cuyos registros pertenecen a una institución. */
+export const TABLAS_INSTITUCIONALES = [
+  'sedes',
+  'areas',
+  'asignaturas',
+  'docentes',
+  'grados',
+  'grupos',
+  'asignaciones',
+  'horarios',
+  'novedades',
+  'seguimientos',
+  'eventos',
+  'comunicados',
+  'tareas',
+] as const satisfies readonly (keyof Tablas)[];
 
 export type Tabla = keyof Tablas;
 export type Nuevo<T> = Omit<T, 'id' | 'created_at' | 'updated_at'> & { id?: ID };
