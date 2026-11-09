@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowDown, ArrowUp, Coffee, DatabaseBackup, Download, Plus, RotateCcw, Save, Trash2, Upload } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, Check, Coffee, DatabaseBackup, Download, Plus, RotateCcw, Save, Trash2, Upload } from 'lucide-react';
 import { Boton, Campo, Encabezado, Entrada, Segmentos, Tarjeta } from '@/components/ui';
 import { useAjustes, useMutar, useTabla } from '@/hooks/useDatos';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +11,7 @@ import { reiniciarDemo, uid } from '@/lib/data/local';
 import { copiarConIdsNuevos } from '@/lib/data/respaldo';
 import { TABLAS_RESPALDO } from '@/lib/data/provider';
 import type { Ajustes, Franja, Tabla, Tablas } from '@/lib/types';
+import { FORMATOS_GRUPO, JORNADAS } from '@/lib/catalogos';
 import { cx, descargarArchivo, hoyISO } from '@/lib/utils';
 
 type Pestana = 'institucion' | 'areas' | 'franjas' | 'rubrica' | 'respaldo';
@@ -100,8 +101,56 @@ function Institucion() {
         {campo('anio_lectivo', 'Año lectivo', { tipo: 'number' })}
         {campo('periodos', 'Número de períodos académicos', { tipo: 'number' })}
       </div>
+
+      <div className="mt-8 border-t border-line pt-6">
+        <h3 className="text-[17px] font-semibold">Grupos</h3>
+        <p className="mt-1 mb-4 text-sm text-muted">Al crear un grupo, SIGEI propone su nombre con este formato.</p>
+        <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Formato del nombre de los grupos">
+          {FORMATOS_GRUPO.map((f) => (
+            <button
+              key={f.valor}
+              type="button"
+              role="radio"
+              aria-checked={v.formato_grupo === f.valor}
+              onClick={() => setV({ ...v, formato_grupo: f.valor })}
+              className={cx(
+                'rounded-[20px] border p-4 text-left transition',
+                v.formato_grupo === f.valor ? 'border-ink bg-surface-2' : 'border-line hover:border-line-strong',
+              )}
+            >
+              <span className="block font-medium">{f.etiqueta}</span>
+              <span className="block text-sm text-muted">{f.ejemplo}</span>
+            </button>
+          ))}
+        </div>
+
+        <p className="mt-6 mb-2 text-sm font-medium">Jornadas de la institución</p>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Jornadas de la institución">
+          {JORNADAS.map((j) => {
+            const activa = v.jornadas.includes(j.valor);
+            return (
+              <button
+                key={j.valor}
+                type="button"
+                aria-pressed={activa}
+                onClick={() =>
+                  setV({ ...v, jornadas: activa ? v.jornadas.filter((x) => x !== j.valor) : [...v.jornadas, j.valor] })
+                }
+                className={cx(
+                  'flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition',
+                  activa ? 'border-ink bg-ink text-bg' : 'border-line bg-surface hover:border-line-strong',
+                )}
+              >
+                {activa && <Check className="size-3.5" />}
+                {j.etiqueta}
+              </button>
+            );
+          })}
+        </div>
+        {v.jornadas.length === 0 && <p className="mt-2 text-xs font-medium text-danger">Elija al menos una jornada.</p>}
+      </div>
       <div className="mt-6 flex justify-end">
-        <Boton icono={<Save className="size-4" />} cargando={pendiente} onClick={() => guardar(v)}>
+        <Boton icono={<Save className="size-4" />} cargando={pendiente} disabled={!v.jornadas.length} onClick={() => guardar(v)}>
           Guardar cambios
         </Boton>
       </div>

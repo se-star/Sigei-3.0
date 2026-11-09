@@ -83,6 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await backend.auth.salir();
       setSesion(null);
       qc.clear();
+      // Quien ingrese después empieza en su inicio, no en la página de la sesión anterior.
+      if (window.location.hash && window.location.hash !== '#/') window.location.hash = '/';
     },
     cambiarInstitucion: async (id) => {
       setSesion(await backend.auth.cambiarInstitucion(id));

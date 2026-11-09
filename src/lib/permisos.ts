@@ -21,6 +21,8 @@ export type Modulo =
   | 'sedes'
   | 'actividad'
   | 'configuracion'
+  /** Ficha del grupo para su director (se muestra solo a quien dirige un grupo). */
+  | 'migrupo'
   /** Panel de la plataforma: solo superadministrador (se resuelve en useAuth). */
   | 'instituciones';
 
@@ -44,6 +46,7 @@ const MATRIZ: Record<Modulo, Record<Rol, Nivel>> = {
   sedes: { admin: 'editar', rector: 'editar', coordinador: 'ver', docente: 'no' },
   actividad: { admin: 'editar', rector: 'ver', coordinador: 'no', docente: 'no' },
   configuracion: { admin: 'editar', rector: 'editar', coordinador: 'no', docente: 'no' },
+  migrupo: { admin: 'ver', rector: 'ver', coordinador: 'ver', docente: 'ver' },
   instituciones: { admin: 'no', rector: 'no', coordinador: 'no', docente: 'no' },
 };
 
@@ -64,4 +67,4 @@ export function nivel(rol: Rol, m: Modulo): Nivel {
   return MATRIZ[m][rol];
 }
 
-export const MODULOS = (Object.keys(MATRIZ) as Modulo[]).filter((m) => m !== 'instituciones');
+export const MODULOS = (Object.keys(MATRIZ) as Modulo[]).filter((m) => m !== 'instituciones' && m !== 'migrupo');

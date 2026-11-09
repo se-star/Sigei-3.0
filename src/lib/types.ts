@@ -98,7 +98,10 @@ export interface Docente extends Base {
 }
 
 export type Nivel = 'preescolar' | 'primaria' | 'secundaria' | 'media';
-export type Jornada = 'manana' | 'tarde' | 'unica' | 'nocturna';
+export type Jornada = 'manana' | 'tarde' | 'unica' | 'nocturna' | 'fin_de_semana';
+
+/** Formato del nombre de los grupos: 6°1, 601, 6A o 6-1. */
+export type FormatoGrupo = 'grado' | 'numero' | 'letra' | 'guion';
 
 export interface Grado extends Base {
   nombre: string;
@@ -253,6 +256,8 @@ export interface Institucion extends Base {
   logo_url: string;
   franjas: Franja[];
   criterios_seguimiento: string[];
+  formato_grupo: FormatoGrupo;
+  jornadas: Jornada[];
 }
 
 /** Configuración institucional (alias histórico). */

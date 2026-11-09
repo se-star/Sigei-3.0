@@ -9,7 +9,7 @@ import { crearDatosDemo, DEMO_ALMENDROS, DEMO_SAN_RAFAEL } from './seed';
  * modelo de la nube: varias instituciones, membresías y un superadministrador.
  */
 const PREFIJO = 'sigei.demo.';
-const VERSION = '3'; // cambia cuando cambia la forma de los datos de ejemplo
+const VERSION = '4'; // cambia cuando cambia la forma de los datos de ejemplo
 const CLAVE_SESION = 'sigei.demo.sesion';
 const CLAVE_LISTO = 'sigei.demo.listo';
 

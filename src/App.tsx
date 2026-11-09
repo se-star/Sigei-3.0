@@ -27,6 +27,7 @@ const Actividad = lazy(() => import('./pages/Actividad'));
 const Configuracion = lazy(() => import('./pages/Configuracion'));
 const Perfil = lazy(() => import('./pages/Perfil'));
 const Instituciones = lazy(() => import('./pages/Instituciones'));
+const MiGrupo = lazy(() => import('./pages/MiGrupo'));
 const SinInstitucion = lazy(() => import('./pages/SinInstitucion'));
 
 function Protegida({ modulo, children }: { modulo: Modulo; children: ReactNode }) {
@@ -83,6 +84,7 @@ export default function App() {
           <Route index element={r('inicio', <Inicio />)} />
           <Route path="docentes" element={r('docentes', <Docentes />)} />
           <Route path="docentes/:id" element={r('docentes', <DocenteDetalle />)} />
+          <Route path="mi-grupo" element={<MiGrupo />} />
           <Route path="grupos" element={r('grupos', <Grupos />)} />
           <Route path="asignacion" element={r('asignacion', <Asignacion />)} />
           <Route path="horarios" element={r('horarios', <Horarios />)} />

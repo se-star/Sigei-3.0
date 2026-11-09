@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock3, Network, Pencil, Plus, Trash2, UserRound } from 'lucide-react';
+import { Check, Clock3, Network, Pencil, Plus, Trash2, UserRound } from 'lucide-react';
 import { Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Progreso, Selector, Vacio } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
-import { useMutar, useTabla } from '@/hooks/useDatos';
+import { useAjustes, useMutar, useTabla } from '@/hooks/useDatos';
 import { useConfirmar } from '@/hooks/useConfirmar';
 import { useToast } from '@/hooks/useToast';
 import { useFormulario } from '@/hooks/useFormulario';
-import { etiqueta, JORNADAS, NIVELES } from '@/lib/catalogos';
+import { etiqueta, FORMATOS_GRUPO, GRADOS_COLOMBIA, JORNADAS, NIVELES } from '@/lib/catalogos';
 import type { Grado, Grupo, Nuevo } from '@/lib/types';
-import { nombreDocente, porId } from '@/lib/utils';
+import { cx, nombreDocente, norm, porId, sugerirNombreGrupo } from '@/lib/utils';
 
 export default function Grupos() {
   const { editar } = useAuth();
@@ -69,7 +69,7 @@ export default function Grupos() {
           puede && (
             <>
               <Boton variante="secundario" icono={<Plus className="size-4" />} onClick={() => setFormGrado({ abierto: true })}>
-                Nuevo grado
+                Agregar grados
               </Boton>
               <Boton icono={<Plus className="size-4" />} onClick={() => setFormGrupo({ abierto: true })} disabled={!grados?.length}>
                 Nuevo grupo
@@ -86,8 +86,8 @@ export default function Grupos() {
           <Vacio
             icono={<Network className="size-6" />}
             titulo="Aún no hay grados"
-            texto="Cree los grados que ofrece la institución (por ejemplo, Transición a Undécimo) y luego sus grupos."
-            accion={puede && <Boton onClick={() => setFormGrado({ abierto: true })}>Crear grado</Boton>}
+            texto="Marque los grados que ofrece la institución, de Prejardín a Undécimo, y luego cree sus grupos."
+            accion={puede && <Boton onClick={() => setFormGrado({ abierto: true })}>Agregar grados</Boton>}
           />
         </div>
       ) : (
@@ -198,20 +198,146 @@ export default function Grupos() {
 }
 
 function FormGrado({ abierto, grado, onCerrar, siguienteOrden }: { abierto: boolean; grado?: Grado; onCerrar: () => void; siguienteOrden: number }) {
-  const { crear, editar } = useMutar('grados');
+  // Al crear se eligen grados del catálogo (varios a la vez); al editar se ajustan sus datos.
+  return grado ? (
+    <EditarGrado abierto={abierto} grado={grado} onCerrar={onCerrar} />
+  ) : (
+    <AgregarGrados abierto={abierto} onCerrar={onCerrar} siguienteOrden={siguienteOrden} />
+  );
+}
+
+/** Agregar grados: se marcan los del catálogo colombiano que ofrece la institución, o se escribe otro. */
+function AgregarGrados({ abierto, onCerrar, siguienteOrden }: { abierto: boolean; onCerrar: () => void; siguienteOrden: number }) {
+  const { data: grados = [] } = useTabla('grados');
+  const { crear } = useMutar('grados');
   const toast = useToast();
-  const f = useFormulario<Nuevo<Grado>>({ nombre: '', nivel: 'primaria', orden: 0 });
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [otro, setOtro] = useState('');
+  const [nivelOtro, setNivelOtro] = useState<Grado['nivel']>('primaria');
+  const [guardando, setGuardando] = useState(false);
   useEffect(() => {
-    if (abierto) f.reiniciar(grado ?? { nombre: '', nivel: 'secundaria', orden: siguienteOrden });
+    if (abierto) {
+      setMarcados([]);
+      setOtro('');
+    }
+  }, [abierto]);
+
+  const existe = (nombre: string) => grados.some((g) => norm(g.nombre) === norm(nombre));
+  const disponibles = GRADOS_COLOMBIA.filter((g) => !existe(g.nombre));
+
+  const guardar = async () => {
+    const otroLimpio = otro.trim();
+    if (!marcados.length && !otroLimpio) return toast.error('Marque al menos un grado o escriba uno.');
+    if (otroLimpio && existe(otroLimpio)) return toast.error(`Ya existe el grado ${otroLimpio}.`);
+    setGuardando(true);
+    try {
+      for (const g of GRADOS_COLOMBIA.filter((x) => marcados.includes(x.nombre)))
+        await crear.mutateAsync({ nombre: g.nombre, nivel: g.nivel, orden: g.orden });
+      if (otroLimpio) await crear.mutateAsync({ nombre: otroLimpio, nivel: nivelOtro, orden: Math.max(siguienteOrden, 14) });
+      const n = marcados.length + (otroLimpio ? 1 : 0);
+      toast.ok(n === 1 ? 'Grado creado.' : `${n} grados creados.`);
+      onCerrar();
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <Modal
+      abierto={abierto}
+      onCerrar={onCerrar}
+      titulo="Agregar grados"
+      descripcion="Marque los grados que ofrece la institución."
+      pie={
+        <>
+          <Boton variante="secundario" onClick={onCerrar}>
+            Cancelar
+          </Boton>
+          <Boton onClick={guardar} cargando={guardando}>
+            {marcados.length > 1 ? `Crear ${marcados.length + (otro.trim() ? 1 : 0)} grados` : 'Crear'}
+          </Boton>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-5">
+        {disponibles.length === 0 ? (
+          <p className="rounded-[20px] bg-surface-2 p-4 text-sm text-ink-2">La institución ya tiene todos los grados de preescolar, básica y media.</p>
+        ) : (
+          NIVELES.map((nivel) => {
+            const delNivel = disponibles.filter((g) => g.nivel === nivel.valor);
+            if (!delNivel.length) return null;
+            const todos = delNivel.every((g) => marcados.includes(g.nombre));
+            return (
+              <fieldset key={nivel.valor}>
+                <legend className="mb-2 flex w-full items-center justify-between text-sm font-medium">
+                  {nivel.etiqueta}
+                  <button
+                    type="button"
+                    className="text-xs text-muted underline-offset-2 hover:text-ink hover:underline"
+                    onClick={() =>
+                      setMarcados(todos ? marcados.filter((m) => !delNivel.some((g) => g.nombre === m)) : [...new Set([...marcados, ...delNivel.map((g) => g.nombre)])])
+                    }
+                  >
+                    {todos ? 'Quitar todos' : 'Marcar todos'}
+                  </button>
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {delNivel.map((g) => {
+                    const sel = marcados.includes(g.nombre);
+                    return (
+                      <button
+                        key={g.nombre}
+                        type="button"
+                        aria-pressed={sel}
+                        onClick={() => setMarcados(sel ? marcados.filter((m) => m !== g.nombre) : [...marcados, g.nombre])}
+                        className={cx(
+                          'flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition',
+                          sel ? 'border-ink bg-ink text-bg' : 'border-line bg-surface hover:border-line-strong',
+                        )}
+                      >
+                        {sel && <Check className="size-3.5" />}
+                        {g.nombre}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            );
+          })
+        )}
+        <div className="border-t border-line pt-4">
+          <p className="mb-2 text-sm font-medium">¿Otro grado?</p>
+          <div className="grid gap-2 sm:grid-cols-[1fr_180px]">
+            <Entrada value={otro} onChange={(e) => setOtro(e.target.value)} placeholder="Nombre del grado (opcional)" aria-label="Nombre de otro grado" />
+            <Selector value={nivelOtro} onChange={(e) => setNivelOtro(e.target.value as Grado['nivel'])} aria-label="Nivel del otro grado">
+              {NIVELES.map((n) => (
+                <option key={n.valor} value={n.valor}>
+                  {n.etiqueta}
+                </option>
+              ))}
+            </Selector>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function EditarGrado({ abierto, grado, onCerrar }: { abierto: boolean; grado: Grado; onCerrar: () => void }) {
+  const { editar } = useMutar('grados');
+  const toast = useToast();
+  const f = useFormulario<Nuevo<Grado>>({ nombre: grado.nombre, nivel: grado.nivel, orden: grado.orden });
+  useEffect(() => {
+    if (abierto) f.reiniciar({ nombre: grado.nombre, nivel: grado.nivel, orden: grado.orden });
   }, [abierto, grado]);
 
   const guardar = async () => {
     if (!f.validar({ nombre: (v) => !v.nombre.trim() && 'Ingrese el nombre del grado.' })) return;
-    const datos = { ...f.valores, nombre: f.valores.nombre.trim(), orden: Number(f.valores.orden) || 0 };
     try {
-      if (grado) await editar.mutateAsync({ id: grado.id, cambios: datos });
-      else await crear.mutateAsync(datos);
-      toast.ok(grado ? 'Grado actualizado.' : 'Grado creado.');
+      await editar.mutateAsync({ id: grado.id, cambios: { ...f.valores, nombre: f.valores.nombre.trim(), orden: Number(f.valores.orden) || 0 } });
+      toast.ok('Grado actualizado.');
       onCerrar();
     } catch (e) {
       toast.error(e);
@@ -222,14 +348,14 @@ function FormGrado({ abierto, grado, onCerrar, siguienteOrden }: { abierto: bool
     <Modal
       abierto={abierto}
       onCerrar={onCerrar}
-      titulo={grado ? 'Editar grado' : 'Nuevo grado'}
+      titulo="Editar grado"
       ancho="sm"
       pie={
         <>
           <Boton variante="secundario" onClick={onCerrar}>
             Cancelar
           </Boton>
-          <Boton onClick={guardar} cargando={crear.isPending || editar.isPending}>
+          <Boton onClick={guardar} cargando={editar.isPending}>
             Guardar
           </Boton>
         </>
@@ -237,7 +363,7 @@ function FormGrado({ abierto, grado, onCerrar, siguienteOrden }: { abierto: bool
     >
       <form className="flex flex-col gap-4" onSubmit={(e) => (e.preventDefault(), guardar())}>
         <Campo etiqueta="Nombre" requerido error={f.errores.nombre}>
-          {(id) => <Entrada id={id} {...f.campo('nombre')} placeholder="Ej. Sexto" />}
+          {(id) => <Entrada id={id} {...f.campo('nombre')} />}
         </Campo>
         <Campo etiqueta="Nivel">
           {(id) => (
@@ -250,7 +376,7 @@ function FormGrado({ abierto, grado, onCerrar, siguienteOrden }: { abierto: bool
             </Selector>
           )}
         </Campo>
-        <Campo etiqueta="Orden" ayuda="Define la posición del grado en las listas (0 = primero).">
+        <Campo etiqueta="Orden" ayuda="Posición del grado en las listas (0 = primero).">
           {(id) => <Entrada id={id} type="number" min={0} value={f.valores.orden} onChange={(e) => f.set('orden', Number(e.target.value))} />}
         </Campo>
         <button type="submit" hidden />
@@ -278,12 +404,24 @@ function FormGrupo({
 }) {
   const { crear, editar } = useMutar('grupos');
   const { data: grupos = [] } = useTabla('grupos');
+  const ajustes = useAjustes();
   const toast = useToast();
-  const vacio: Nuevo<Grupo> = { grado_id: '', nombre: '', jornada: 'manana', sede_id: null, director_id: null, capacidad: 38, estudiantes: 0 };
+  const vacio: Nuevo<Grupo> = { grado_id: '', nombre: '', jornada: ajustes.jornadas[0] ?? 'manana', sede_id: null, director_id: null, capacidad: 38, estudiantes: 0 };
   const f = useFormulario<Nuevo<Grupo>>(vacio);
+  // El nombre se propone según el formato de la institución hasta que la persona lo cambie.
+  const [nombreManual, setNombreManual] = useState(false);
+  const sugerir = (gradoId: string) => {
+    const gr = grados.find((g) => g.id === gradoId);
+    if (!gr) return '';
+    return sugerirNombreGrupo(gr.nombre, grupos.filter((g) => g.grado_id === gradoId).map((g) => g.nombre), ajustes.formato_grupo) ?? '';
+  };
   useEffect(() => {
-    if (abierto) f.reiniciar(grupo ?? { ...vacio, grado_id: grado_id ?? grados[0]?.id ?? '', sede_id: sedes[0]?.id ?? null });
+    if (!abierto) return;
+    const gradoInicial = grado_id ?? grados[0]?.id ?? '';
+    f.reiniciar(grupo ?? { ...vacio, grado_id: gradoInicial, nombre: sugerir(gradoInicial), sede_id: sedes[0]?.id ?? null });
+    setNombreManual(!!grupo);
   }, [abierto, grupo, grado_id]);
+  const jornadas = JORNADAS.filter((j) => ajustes.jornadas.includes(j.valor) || j.valor === f.valores.jornada);
 
   const guardar = async () => {
     const ok = f.validar({
@@ -334,7 +472,14 @@ function FormGrupo({
       <form className="grid gap-4 sm:grid-cols-2" onSubmit={(e) => (e.preventDefault(), guardar())}>
         <Campo etiqueta="Grado" requerido error={f.errores.grado_id}>
           {(id) => (
-            <Selector id={id} value={v.grado_id} onChange={(e) => set('grado_id', e.target.value)}>
+            <Selector
+              id={id}
+              value={v.grado_id}
+              onChange={(e) => {
+                set('grado_id', e.target.value);
+                if (!nombreManual && !grupo) set('nombre', sugerir(e.target.value));
+              }}
+            >
               <option value="">Seleccione…</option>
               {grados.map((g) => (
                 <option key={g.id} value={g.id}>
@@ -344,13 +489,28 @@ function FormGrupo({
             </Selector>
           )}
         </Campo>
-        <Campo etiqueta="Nombre del grupo" requerido error={f.errores.nombre}>
-          {(id) => <Entrada id={id} {...f.campo('nombre')} placeholder="Ej. 6°1, 601, 6A" />}
+        <Campo
+          etiqueta="Nombre del grupo"
+          requerido
+          error={f.errores.nombre}
+          ayuda={!grupo && !nombreManual && v.nombre ? 'Propuesto según el formato de la institución.' : undefined}
+        >
+          {(id) => (
+            <Entrada
+              id={id}
+              value={f.valores.nombre}
+              onChange={(e) => {
+                setNombreManual(true);
+                f.set('nombre', e.target.value);
+              }}
+              placeholder={FORMATOS_GRUPO.find((x) => x.valor === ajustes.formato_grupo)?.ejemplo}
+            />
+          )}
         </Campo>
         <Campo etiqueta="Jornada">
           {(id) => (
             <Selector id={id} value={v.jornada} onChange={(e) => set('jornada', e.target.value as Grupo['jornada'])}>
-              {JORNADAS.map((j) => (
+              {jornadas.map((j) => (
                 <option key={j.valor} value={j.valor}>
                   {j.etiqueta}
                 </option>

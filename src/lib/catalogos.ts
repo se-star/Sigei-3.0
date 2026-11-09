@@ -3,6 +3,7 @@ import type {
   EstadoDocente,
   EstadoNovedad,
   EstadoTarea,
+  FormatoGrupo,
   Jornada,
   Nivel,
   Prioridad,
@@ -57,6 +58,35 @@ export const JORNADAS: Opcion<Jornada>[] = [
   op('tarde', 'Tarde'),
   op('unica', 'Única'),
   op('nocturna', 'Nocturna'),
+  op('fin_de_semana', 'Fin de semana'),
+];
+
+export const FORMATOS_GRUPO: { valor: FormatoGrupo; etiqueta: string; ejemplo: string }[] = [
+  { valor: 'grado', etiqueta: 'Grado y número', ejemplo: '6°1, 6°2, 11°1' },
+  { valor: 'numero', etiqueta: 'Numérico', ejemplo: '601, 602, 1101' },
+  { valor: 'letra', etiqueta: 'Grado y letra', ejemplo: '6A, 6B, 11A' },
+  { valor: 'guion', etiqueta: 'Grado, guion y número', ejemplo: '6-1, 6-2, 11-1' },
+];
+
+/**
+ * Grados oficiales en Colombia (preescolar, básica y media), con el código corto
+ * que se usa en el nombre de los grupos.
+ */
+export const GRADOS_COLOMBIA: { nombre: string; nivel: Nivel; orden: number; codigo: string }[] = [
+  { nombre: 'Prejardín', nivel: 'preescolar', orden: 0, codigo: 'PJ' },
+  { nombre: 'Jardín', nivel: 'preescolar', orden: 1, codigo: 'J' },
+  { nombre: 'Transición', nivel: 'preescolar', orden: 2, codigo: '0' },
+  { nombre: 'Primero', nivel: 'primaria', orden: 3, codigo: '1' },
+  { nombre: 'Segundo', nivel: 'primaria', orden: 4, codigo: '2' },
+  { nombre: 'Tercero', nivel: 'primaria', orden: 5, codigo: '3' },
+  { nombre: 'Cuarto', nivel: 'primaria', orden: 6, codigo: '4' },
+  { nombre: 'Quinto', nivel: 'primaria', orden: 7, codigo: '5' },
+  { nombre: 'Sexto', nivel: 'secundaria', orden: 8, codigo: '6' },
+  { nombre: 'Séptimo', nivel: 'secundaria', orden: 9, codigo: '7' },
+  { nombre: 'Octavo', nivel: 'secundaria', orden: 10, codigo: '8' },
+  { nombre: 'Noveno', nivel: 'secundaria', orden: 11, codigo: '9' },
+  { nombre: 'Décimo', nivel: 'media', orden: 12, codigo: '10' },
+  { nombre: 'Undécimo', nivel: 'media', orden: 13, codigo: '11' },
 ];
 
 export const TIPOS_NOVEDAD: Opcion<TipoNovedad>[] = [
