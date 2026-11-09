@@ -27,6 +27,10 @@ export interface AuthProvider {
   ingresar(email: string, clave: string): Promise<Sesion>;
   registrarse?(nombre: string, email: string, clave: string): Promise<void>;
   recuperarClave?(email: string): Promise<void>;
+  /** Cambia la contraseña del usuario con sesión activa. */
+  cambiarClave?(nueva: string): Promise<void>;
+  /** Avisa cuando el usuario llega desde el enlace de recuperar contraseña. */
+  onRecuperacion?(cb: () => void): () => void;
   ingresarDemo?(rol: Rol): Promise<Sesion>;
   salir(): Promise<void>;
 }

@@ -71,7 +71,7 @@ Abra la dirección que aparece en la terminal y elija un rol. Sin credenciales d
    - Las siguientes quedan pendientes hasta que un administrador las active en *Usuarios y roles*.
 6. Opcional: para empezar con datos, descargue un respaldo desde el modo demo y restáurelo en *Configuración → Respaldo*.
 
-> En **Authentication → URL Configuration** agregue la dirección donde publicará SIGEI, para que funcionen los correos de confirmación y de recuperación de contraseña.
+> En **Authentication → URL Configuration** ponga como *Site URL* la dirección publicada (por ejemplo `https://se-star.github.io/Sigei-3.0/`) y agréguela también en *Redirect URLs*, junto con `http://localhost:5173/` si va a trabajar en local. Así funcionan los correos de confirmación y de recuperación de contraseña. Quien llega desde el enlace de recuperación ve una pantalla para crear su contraseña nueva; con sesión iniciada también se puede cambiar desde *Mi perfil*.
 
 ## Publicar en GitHub Pages
 
