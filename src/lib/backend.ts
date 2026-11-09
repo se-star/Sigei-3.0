@@ -29,3 +29,9 @@ function crear(): { datos: DataProvider; auth: AuthProvider } {
 
 export const backend = crear();
 export const modoDemo = backend.datos.modo === 'demo';
+
+/**
+ * Ingreso de docentes con documento y código por correo. En la nube se activa con
+ * VITE_ACCESO_DOCENTE=1 cuando la función acceso-docente y el correo propio están listos.
+ */
+export const accesoDocenteActivo = modoDemo || import.meta.env.VITE_ACCESO_DOCENTE === '1';

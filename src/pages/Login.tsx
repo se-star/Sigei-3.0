@@ -6,7 +6,7 @@ import { IngresoDocente } from '@/components/IngresoDocente';
 import { Logo, Wordmark } from '@/components/layout/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
-import { backend, modoDemo, servidorDatos } from '@/lib/backend';
+import { accesoDocenteActivo, backend, modoDemo, servidorDatos } from '@/lib/backend';
 import type { Rol } from '@/lib/types';
 import { cx } from '@/lib/utils';
 
@@ -101,6 +101,12 @@ type Pestana = 'docente' | 'directivos';
 
 /** Dos formas de entrar: docentes con documento y código; directivos con correo y contraseña. */
 function Acceso() {
+  // Mientras el ingreso con código no esté configurado, todos entran con correo y contraseña.
+  if (!accesoDocenteActivo) return <AccesoNube soloCorreo />;
+  return <AccesoConPestanas />;
+}
+
+function AccesoConPestanas() {
   const [pestana, setPestana] = useState<Pestana>(() => {
     try {
       return (localStorage.getItem('sigei.ingreso') as Pestana) || 'docente';
@@ -188,7 +194,7 @@ function AccesoDemo() {
   );
 }
 
-function AccesoNube() {
+function AccesoNube({ soloCorreo }: { soloCorreo?: boolean }) {
   const { ingresar } = useAuth();
   const toast = useToast();
   const [modo, setModo] = useState<'entrar' | 'registro' | 'recuperar'>('entrar');
@@ -233,13 +239,15 @@ function AccesoNube() {
     }
   };
 
-  const titulos = { entrar: 'Ingreso de directivos', registro: 'Solicitar acceso', recuperar: 'Recuperar contraseña' };
+  const titulos = { entrar: soloCorreo ? 'Bienvenido' : 'Ingreso de directivos', registro: 'Solicitar acceso', recuperar: 'Recuperar contraseña' };
   return (
     <>
       <h2 className="text-[26px] font-semibold">{titulos[modo]}</h2>
       <p className="mt-1.5 text-[15px] text-muted">
-        {modo === 'entrar' && 'Rectoría, coordinación y administración: ingrese con su correo y contraseña.'}
-        {modo === 'registro' && 'Cree su cuenta. La administración debe aprobarla antes de que pueda ingresar.'}
+        {modo === 'entrar' &&
+          (soloCorreo ? 'Ingrese con su correo y contraseña.' : 'Rectoría, coordinación y administración: ingrese con su correo y contraseña.')}
+        {modo === 'registro' &&
+          'Cree su cuenta. Si es docente, use el mismo correo que su institución tiene registrado: su cuenta quedará vinculada y solo faltará que coordinación la active.'}
         {modo === 'recuperar' && 'Le enviaremos un enlace para crear una contraseña nueva.'}
       </p>
       {mensaje && <p className="mt-5 rounded-[20px] bg-ok-soft p-4 text-sm font-medium text-ok">{mensaje}</p>}

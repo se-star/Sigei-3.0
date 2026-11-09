@@ -91,13 +91,20 @@ Abra la dirección que aparece en la terminal y elija un rol. El modo demo trae 
    - Las siguientes eligen su institución al registrarse y quedan pendientes hasta que el administrador de esa institución las active en *Usuarios y roles*.
 6. Opcional: para empezar con datos, descargue un respaldo desde el modo demo y cárguelo en *Configuración → Respaldo*. Los registros se copian con identificadores nuevos, así que el mismo respaldo sirve para varias instituciones.
 
-#### Ingreso de docentes con documento
+#### Ingreso de docentes
 
-1. Ejecute también `supabase/migrations/0003_acceso_docentes.sql` (vinculación automática y soportes).
+Ejecute también `supabase/migrations/0003_acceso_docentes.sql` (vinculación y soportes) y `0004_vinculacion_segura.sql`.
+
+**Mientras no se active el código por correo**, los docentes entran con correo y contraseña: usan *Solicitar acceso* con el mismo correo que tienen en *Docentes*, su cuenta queda vinculada sola a su registro y coordinación solo debe activarla en *Usuarios y roles* (la columna *Acceso a SIGEI* muestra quién está *Por activar*). Una cuenta solo se activa sola si su correo está comprobado (ingreso con código o confirmación por enlace).
+
+**Para activar el ingreso con documento y código:**
+
+1. Las migraciones anteriores ya deben estar ejecutadas.
 2. **Función del servidor**: en **Edge Functions → Deploy a new function → Via Editor**, nómbrela `acceso-docente`, pegue el contenido de `supabase/functions/acceso-docente/index.ts`, despliéguela y, en su configuración, **desactive "Verify JWT"** (la usan personas que aún no han ingresado).
 3. **Correo propio** (obligatorio para que los códigos lleguen a todos los docentes): en **Authentication → Emails → SMTP Settings** configure un servicio como Gmail (con contraseña de aplicación) o Resend.
 4. **Plantillas**: en **Authentication → Emails**, en *Magic Link* y en *Confirm signup*, incluya el código con `{{ .Token }}`. Por ejemplo: «Su código para ingresar a SIGEI es {{ .Token }}. Vence en una hora.»
-5. Registre a cada docente en *Docentes* con su documento y su correo. La columna *Acceso a SIGEI* muestra quién ya ingresó y a quién le falta el correo.
+5. En GitHub, **Settings → Secrets and variables → Actions → Variables**, cree la variable `VITE_ACCESO_DOCENTE` con el valor `1` y vuelva a publicar. Aparecerá la pestaña *Soy docente* en el ingreso.
+6. Registre a cada docente en *Docentes* con su documento y su correo.
 
 > En **Authentication → URL Configuration** ponga como *Site URL* la dirección publicada (por ejemplo `https://se-star.github.io/Sigei-3.0/`) y agréguela también en *Redirect URLs*, junto con `http://localhost:5173/` si va a trabajar en local. Así funcionan los correos de confirmación y de recuperación de contraseña. Quien llega desde el enlace de recuperación ve una pantalla para crear su contraseña nueva; con sesión iniciada también se puede cambiar desde *Mi perfil*.
 
