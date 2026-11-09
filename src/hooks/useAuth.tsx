@@ -11,6 +11,9 @@ interface AuthCtx {
   ingresar: (email: string, clave: string) => Promise<void>;
   ingresarDemo: (rol: Rol) => Promise<void>;
   salir: () => Promise<void>;
+  /** true si la persona llegó desde el enlace de recuperar contraseña. */
+  recuperando: boolean;
+  cambiarClave: (nueva: string) => Promise<void>;
   ver: (m: Modulo) => boolean;
   editar: (m: Modulo) => boolean;
 }
@@ -20,7 +23,10 @@ const Ctx = createContext<AuthCtx | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [recuperando, setRecuperando] = useState(false);
   const qc = useQueryClient();
+
+  useEffect(() => backend.auth.onRecuperacion?.(() => setRecuperando(true)), []);
 
   useEffect(() => {
     let vivo = true;
@@ -57,6 +63,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await backend.auth.salir();
       setSesion(null);
       qc.clear();
+    },
+    recuperando,
+    cambiarClave: async (nueva) => {
+      if (!backend.auth.cambiarClave) throw new Error('En modo demo no hay contraseñas.');
+      await backend.auth.cambiarClave(nueva);
+      setRecuperando(false);
     },
     ver: (m) => puedeVer(perfil?.rol, m),
     editar: (m) => puedeEditar(perfil?.rol, m),

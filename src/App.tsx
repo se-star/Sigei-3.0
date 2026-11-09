@@ -5,6 +5,8 @@ import { Cargando, Vacio } from './components/ui';
 import { useAuth } from './hooks/useAuth';
 import type { Modulo } from './lib/permisos';
 import Login from './pages/Login';
+import { FormClave } from './components/formularios/FormClave';
+import { Logo, Wordmark } from './components/layout/Logo';
 import { ShieldX } from 'lucide-react';
 
 const Inicio = lazy(() => import('./pages/Inicio'));
@@ -39,7 +41,7 @@ function Protegida({ modulo, children }: { modulo: Modulo; children: ReactNode }
 }
 
 export default function App() {
-  const { perfil, cargando } = useAuth();
+  const { perfil, cargando, recuperando } = useAuth();
   if (cargando)
     return (
       <div className="grid min-h-dvh place-items-center">
@@ -47,6 +49,7 @@ export default function App() {
       </div>
     );
   if (!perfil) return <Login />;
+  if (recuperando) return <NuevaClave />;
 
   const r = (modulo: Modulo, el: ReactNode) => <Protegida modulo={modulo}>{el}</Protegida>;
 
@@ -75,5 +78,24 @@ export default function App() {
         </Route>
       </Routes>
     </Suspense>
+  );
+}
+
+/** Pantalla a la que llega quien abrió el enlace de recuperar contraseña. */
+function NuevaClave() {
+  return (
+    <div className="grid min-h-dvh place-items-center px-4 py-10">
+      <div className="w-full max-w-md">
+        <div className="mb-8 flex items-center justify-center gap-3">
+          <Logo className="size-10" />
+          <Wordmark className="text-[44px] leading-none" />
+        </div>
+        <div className="card p-6 sm:p-8">
+          <h1 className="text-[26px] font-semibold">Cree su nueva contraseña</h1>
+          <p className="mt-1.5 mb-6 text-[15px] text-muted">Ingresó desde el enlace de recuperación. Defina una contraseña para seguir usando SIGEI.</p>
+          <FormClave textoBoton="Guardar y continuar" />
+        </div>
+      </div>
+    </div>
   );
 }

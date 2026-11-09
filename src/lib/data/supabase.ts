@@ -8,7 +8,13 @@ import type { AuthProvider, DataProvider, Sesion } from './provider';
  */
 export function crearCliente(url: string, anonKey: string): SupabaseClient {
   return createClient(url, anonKey, {
-    auth: { persistSession: true, autoRefreshToken: true },
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      // PKCE devuelve el código en ?code=… y deja libre el # que usa el enrutador.
+      flowType: 'pkce',
+    },
   });
 }
 
@@ -69,9 +75,43 @@ export class SupabaseDataProvider implements DataProvider {
   }
 }
 
+/** Dirección de esta app (sin el #), a la que regresan los enlaces de los correos. */
+function urlDeRetorno() {
+  return window.location.origin + window.location.pathname;
+}
+
 export class SupabaseAuthProvider implements AuthProvider {
   readonly modo = 'supabase' as const;
-  constructor(private sb: SupabaseClient) {}
+  private recuperando = false;
+  private oyentesRecuperacion = new Set<() => void>();
+
+  constructor(private sb: SupabaseClient) {
+    // Se registra al crear el cliente para no perder el evento si llega antes de montar la UI.
+    sb.auth.onAuthStateChange((evento) => {
+      if (evento === 'PASSWORD_RECOVERY') {
+        this.recuperando = true;
+        this.oyentesRecuperacion.forEach((cb) => cb());
+      }
+    });
+  }
+
+  onRecuperacion(cb: () => void) {
+    this.oyentesRecuperacion.add(cb);
+    if (this.recuperando) cb();
+    return () => {
+      this.oyentesRecuperacion.delete(cb);
+    };
+  }
+
+  async cambiarClave(nueva: string) {
+    const { error } = await this.sb.auth.updateUser({ password: nueva });
+    if (error) {
+      if (error.message.toLowerCase().includes('different from the old')) throw new Error('La contraseña nueva debe ser distinta de la anterior.');
+      if (error.message.toLowerCase().includes('at least')) throw new Error('La contraseña es demasiado corta.');
+      throw new Error(error.message);
+    }
+    this.recuperando = false;
+  }
 
   private async perfilDe(userId: string): Promise<Sesion | null> {
     const { data, error } = await this.sb.from('perfiles').select('*').eq('id', userId).maybeSingle();
@@ -93,7 +133,7 @@ export class SupabaseAuthProvider implements AuthProvider {
   onCambio(cb: (s: Sesion | null) => void) {
     const { data } = this.sb.auth.onAuthStateChange((evento, session) => {
       if (evento === 'SIGNED_OUT' || !session) return cb(null);
-      if (evento === 'SIGNED_IN' || evento === 'USER_UPDATED') {
+      if (evento === 'SIGNED_IN' || evento === 'USER_UPDATED' || evento === 'PASSWORD_RECOVERY') {
         // Fuera del callback para no bloquear el cliente de auth.
         setTimeout(() => {
           this.perfilDe(session.user.id)
@@ -121,15 +161,13 @@ export class SupabaseAuthProvider implements AuthProvider {
     const { error } = await this.sb.auth.signUp({
       email,
       password: clave,
-      options: { data: { nombre } },
+      options: { data: { nombre }, emailRedirectTo: urlDeRetorno() },
     });
     if (error) throw new Error(error.message);
   }
 
   async recuperarClave(email: string) {
-    const { error } = await this.sb.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname,
-    });
+    const { error } = await this.sb.auth.resetPasswordForEmail(email, { redirectTo: urlDeRetorno() });
     if (error) throw new Error(error.message);
   }
 

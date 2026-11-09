@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Bell, Clock3, LogOut, Monitor, Moon, Sun, UserRound } from 'lucide-react';
 import { Avatar, Boton, Encabezado, Insignia, Tarjeta } from '@/components/ui';
+import { FormClave } from '@/components/formularios/FormClave';
 import { useAuth } from '@/hooks/useAuth';
 import { useTema, type Tema } from '@/hooks/useTema';
 import { useTabla } from '@/hooks/useDatos';
@@ -63,10 +64,15 @@ export default function Perfil() {
             <Boton variante="secundario" className="text-danger" icono={<LogOut className="size-4" />} onClick={salir}>
               Cerrar sesión
             </Boton>
-            {!modoDemo && <p className="mt-3 text-xs text-muted">Para cambiar su contraseña use “¿Olvidó su contraseña?” en la pantalla de ingreso.</p>}
+
           </div>
         </Tarjeta>
-        <Tarjeta titulo="Apariencia">
+        {!modoDemo && (
+          <Tarjeta titulo="Cambiar contraseña" className="md:col-start-1">
+            <FormClave />
+          </Tarjeta>
+        )}
+        <Tarjeta titulo="Apariencia" className="md:col-start-2 md:row-start-1">
           <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Tema">
             {temas.map(({ v, t, i: I }) => (
               <button
