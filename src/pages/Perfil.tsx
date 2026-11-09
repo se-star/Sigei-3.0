@@ -11,7 +11,7 @@ import { etiqueta, ROLES, tono } from '@/lib/catalogos';
 import { cx, nombreDocente } from '@/lib/utils';
 
 export default function Perfil() {
-  const { perfil, instituciones, salir } = useAuth();
+  const { perfil, instituciones, salir, ver } = useAuth();
   const { tema, setTema } = useTema();
   const { data: docentes = [] } = useTabla('docentes');
   if (!perfil) return null;
@@ -51,14 +51,14 @@ export default function Perfil() {
                 </Link>
                 <Link to="/novedades">
                   <Boton variante="secundario" tam="sm" icono={<Bell className="size-3.5" />}>
-                    Mis novedades
+                    Mis permisos
                   </Boton>
                 </Link>
-                <Link to={`/docentes/${doc.id}`}>
+                {ver('docentes') && <Link to={`/docentes/${doc.id}`}>
                   <Boton variante="secundario" tam="sm" icono={<UserRound className="size-3.5" />}>
                     Mi hoja de vida
                   </Boton>
-                </Link>
+                </Link>}
               </div>
             </div>
           )}

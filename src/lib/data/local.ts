@@ -1,6 +1,6 @@
-import type { Actividad, ID, MiInstitucion, Miembro, Nuevo, ResumenInstitucion, Rol, Tabla, Tablas } from '../types';
+import type { Actividad, ID, MiInstitucion, Miembro, Nuevo, ResumenInstitucion, Rol, Soporte, Tabla, Tablas } from '../types';
 import { TABLAS_INSTITUCIONALES } from '../types';
-import { armarSesion, institucionGuardada, type AuthProvider, type DataProvider, type InstitucionPublica, type Sesion } from './provider';
+import { armarSesion, institucionGuardada, nombreSeguro, normalizarDocumento, type AuthProvider, type DataProvider, type InstitucionPublica, type Sesion } from './provider';
 import { crearDatosDemo, DEMO_ALMENDROS, DEMO_SAN_RAFAEL } from './seed';
 
 /**
@@ -9,7 +9,7 @@ import { crearDatosDemo, DEMO_ALMENDROS, DEMO_SAN_RAFAEL } from './seed';
  * modelo de la nube: varias instituciones, membresías y un superadministrador.
  */
 const PREFIJO = 'sigei.demo.';
-const VERSION = '2'; // cambia cuando cambia la forma de los datos de ejemplo
+const VERSION = '3'; // cambia cuando cambia la forma de los datos de ejemplo
 const CLAVE_SESION = 'sigei.demo.sesion';
 const CLAVE_LISTO = 'sigei.demo.listo';
 
@@ -229,6 +229,35 @@ export class LocalDataProvider implements DataProvider {
     return 'agregado';
   }
 
+  /* En modo demo los soportes se guardan en este navegador (máx. 1,5 MB cada uno). */
+  async subirSoporte(archivo: File, docenteId: ID): Promise<Soporte> {
+    if (archivo.size > 1.5 * 1024 * 1024) throw new Error('En modo demo los soportes pueden pesar hasta 1,5 MB.');
+    const ruta = `${this.inst}/${docenteId}/${uid().slice(0, 8)}-${nombreSeguro(archivo.name)}`;
+    const datos = await new Promise<string>((ok, mal) => {
+      const r = new FileReader();
+      r.onload = () => ok(String(r.result));
+      r.onerror = () => mal(new Error('No fue posible leer el archivo.'));
+      r.readAsDataURL(archivo);
+    });
+    try {
+      localStorage.setItem(PREFIJO + 'archivo.' + ruta, datos);
+    } catch {
+      throw new Error('El navegador no tiene espacio para guardar el soporte en modo demo.');
+    }
+    return { ruta, nombre: archivo.name, tipo: archivo.type, tamano: archivo.size };
+  }
+
+  async urlSoporte(ruta: string): Promise<string> {
+    const datos = localStorage.getItem(PREFIJO + 'archivo.' + ruta);
+    if (!datos) throw new Error('El soporte ya no existe en este navegador.');
+    const blob = await (await fetch(datos)).blob();
+    return URL.createObjectURL(blob);
+  }
+
+  async borrarSoportes(rutas: string[]) {
+    for (const r of rutas) localStorage.removeItem(PREFIJO + 'archivo.' + r);
+  }
+
   async resumenInstituciones(): Promise<ResumenInstitucion[]> {
     await espera();
     const docentes = this.todas('docentes');
@@ -276,7 +305,7 @@ const USUARIOS_DEMO: Record<RolDemo, { id: ID; nombre: string; email: string; su
   docente: {
     id: 'demo-docente',
     nombre: 'Laura Marcela Restrepo Gil',
-    email: 'laura.restrepo@demo.sigei',
+    email: 'laura.restrepo@docentes.edu.co',
     membresias: [
       { institucion_id: 'iela', rol: 'docente', docente_id: 'Laura Marcela', activo: true },
       { institucion_id: 'iesr', rol: 'docente', docente_id: 'Laura Marcela', activo: true },
@@ -378,6 +407,56 @@ export class LocalAuthProvider implements AuthProvider {
     if (lista.some((m) => m.usuario_id === u.id && m.institucion_id === institucionId)) throw new Error('Ya tiene acceso o una solicitud en esa institución.');
     lista.push({ usuario_id: u.id, institucion_id: institucionId, rol: 'docente', docente_id: null, activo: false });
     escribir(PREFIJO + 'membresias', lista);
+  }
+
+  /* Ingreso de docentes con documento. En modo demo el código siempre es 123456. */
+  private docentesPorDocumento(documento: string) {
+    const doc = normalizarDocumento(documento);
+    const insts = leer<Tablas['instituciones'][]>(PREFIJO + 'instituciones', []);
+    return leer<Tablas['docentes'][]>(PREFIJO + 'docentes', []).filter(
+      (d) => d.documento === doc && d.estado !== 'retirado' && d.email.includes('@') && insts.some((i) => i.id === d.institucion_id && i.activa),
+    );
+  }
+
+  async solicitarCodigoDocente(documento: string) {
+    sembrarSiHaceFalta();
+    await espera();
+    const docs = this.docentesPorDocumento(documento);
+    if (!docs.length)
+      throw new Error('No encontramos un docente activo con ese documento y un correo registrado. Pida a la coordinación de su institución que revise sus datos.');
+    const enmascarar = (c: string) => {
+      const [u, dom] = c.split('@');
+      return `${u.length <= 2 ? u[0] : `${u[0]}•••${u[u.length - 1]}`}@${dom}`;
+    };
+    return { destinos: [...new Set(docs.map((d) => enmascarar(d.email.toLowerCase())))] };
+  }
+
+  async ingresarConCodigo(documento: string, codigo: string): Promise<Sesion> {
+    await espera();
+    if (codigo.replace(/\D/g, '') !== '123456') throw new Error('El código no es válido o ya venció. Pida uno nuevo.');
+    const docs = this.docentesPorDocumento(documento);
+    if (!docs.length) throw new Error('No encontramos un docente activo con ese documento.');
+    const correo = docs[0].email.toLowerCase();
+    // Igual que en la nube: solo se vinculan los registros que tienen ese mismo correo.
+    const conCorreo = docs.filter((d) => d.email.toLowerCase() === correo);
+    const perfiles = leer<PerfilDemo[]>(PREFIJO + 'perfiles', []);
+    let p = perfiles.find((x) => x.email.toLowerCase() === correo);
+    if (!p) {
+      p = { id: uid(), nombre: `${docs[0].nombres} ${docs[0].apellidos}`, email: correo, es_superadmin: false };
+      escribir(PREFIJO + 'perfiles', [...perfiles, p]);
+    }
+    // Igual que en la nube: queda vinculado en cada institución donde está registrado.
+    const membresias = leer<MembresiaDemo[]>(PREFIJO + 'membresias', []);
+    for (const d of conCorreo) {
+      const m = membresias.find((x) => x.usuario_id === p!.id && x.institucion_id === d.institucion_id);
+      if (m) Object.assign(m, { activo: true, docente_id: m.docente_id ?? d.id });
+      else membresias.push({ usuario_id: p.id, institucion_id: d.institucion_id!, rol: 'docente', docente_id: d.id, activo: true });
+    }
+    escribir(PREFIJO + 'membresias', membresias);
+    escribir(CLAVE_SESION, p);
+    const s = this.construir()!;
+    this.emitir(s);
+    return s;
   }
 
   async salir() {

@@ -66,7 +66,7 @@ export default function Seguimiento() {
   return (
     <>
       <Encabezado
-        titulo="Seguimiento pedagógico"
+        titulo={puede ? 'Seguimiento pedagógico' : 'Mi seguimiento'}
         descripcion={puede ? 'Visitas de aula y acompañamiento al equipo docente, con rúbrica de valoración.' : 'Los acompañamientos socializados con usted.'}
         acciones={
           puede && (

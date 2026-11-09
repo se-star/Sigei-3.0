@@ -12,6 +12,8 @@ interface AuthCtx {
   cargando: boolean;
   ingresar: (email: string, clave: string) => Promise<void>;
   ingresarDemo: (rol: Rol | 'superadmin') => Promise<void>;
+  /** Docentes: ingreso con documento y código enviado al correo. */
+  ingresarConCodigo: (documento: string, codigo: string) => Promise<void>;
   salir: () => Promise<void>;
   cambiarInstitucion: (id: ID) => Promise<void>;
   /** Vuelve a leer instituciones y roles (tras solicitar acceso o crear una institución). */
@@ -68,6 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     instituciones: sesion?.instituciones ?? [],
     cargando,
     ingresar: async (email, clave) => setSesion(await backend.auth.ingresar(email, clave)),
+    ingresarConCodigo: async (documento, codigo) => {
+      qc.clear();
+      setSesion(await backend.auth.ingresarConCodigo(documento, codigo));
+    },
     ingresarDemo: async (rol) => {
       if (!backend.auth.ingresarDemo) throw new Error('El modo demo no está disponible.');
       qc.clear();

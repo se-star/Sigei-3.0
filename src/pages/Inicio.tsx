@@ -18,6 +18,7 @@ import {
 import { Avatar, Esqueleto, Insignia, Tarjeta } from '@/components/ui';
 import { BusquedaPildora } from '@/components/layout/Shell';
 import { useAuth } from '@/hooks/useAuth';
+import InicioDocente from './InicioDocente';
 import { useAjustes, useTabla } from '@/hooks/useDatos';
 import { DIAS, etiqueta, PRIORIDADES, tono, TIPOS_EVENTO, TIPOS_NOVEDAD } from '@/lib/catalogos';
 import {
@@ -42,6 +43,11 @@ function saludo() {
 }
 
 export default function Inicio() {
+  const { perfil } = useAuth();
+  return perfil?.rol === 'docente' ? <InicioDocente /> : <InicioDirectivo />;
+}
+
+function InicioDirectivo() {
   const { perfil } = useAuth();
   const ajustes = useAjustes();
   const { data: docentes, isLoading } = useTabla('docentes');

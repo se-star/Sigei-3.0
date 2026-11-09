@@ -18,7 +18,7 @@ import {
   X,
   FlaskConical,
 } from 'lucide-react';
-import { NAVEGACION } from './navegacion';
+import { NAVEGACION, etiquetaDe } from './navegacion';
 import { Paleta } from './Paleta';
 import { useAuth } from '@/hooks/useAuth';
 import { useTema, type Tema } from '@/hooks/useTema';
@@ -64,6 +64,7 @@ export function Shell() {
 
   if (!perfil) return null;
 
+  const esDocente = perfil.rol === 'docente';
   const menu = (mini: boolean) => (
     <MenuDesplazable mini={mini}>
       {NAVEGACION.map((g) => {
@@ -78,8 +79,8 @@ export function Shell() {
                   <NavLink
                     to={i.ruta}
                     end={i.ruta === '/'}
-                    title={mini ? i.etiqueta : undefined}
-                    aria-label={mini ? i.etiqueta : undefined}
+                    title={mini ? etiquetaDe(i, esDocente) : undefined}
+                    aria-label={mini ? etiquetaDe(i, esDocente) : undefined}
                     className={({ isActive }) =>
                       cx(
                         'flex items-center gap-3 rounded-[20px] text-[15px] transition',
@@ -89,7 +90,7 @@ export function Shell() {
                     }
                   >
                     <i.icono className="size-[20px] shrink-0" strokeWidth={1.75} />
-                    {!mini && <span className="truncate">{i.etiqueta}</span>}
+                    {!mini && <span className="truncate">{etiquetaDe(i, esDocente)}</span>}
                   </NavLink>
                 </li>
               ))}
@@ -166,7 +167,7 @@ export function Shell() {
             >
               <Menu className="size-5" />
             </button>
-            {loc.pathname === '/' ? <div className="flex-1" /> : <BusquedaPildora onAbrir={() => setPaleta(true)} />}
+            {loc.pathname === '/' ? <div className="flex-1" /> : <BusquedaPildora onAbrir={() => setPaleta(true)} texto={esDocente ? 'Buscar en SIGEI' : undefined} />}
             <div className="ml-auto flex items-center gap-1.5">
               {modoDemo && (
                 <span className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] text-ink-2 shadow-chip md:inline-flex">
@@ -190,7 +191,7 @@ export function Shell() {
 }
 
 /** Búsqueda en píldora con botón circular violeta: el único acento saturado. */
-export function BusquedaPildora({ onAbrir, grande }: { onAbrir: () => void; grande?: boolean }) {
+export function BusquedaPildora({ onAbrir, grande, texto = 'Buscar docentes, grupos o módulos' }: { onAbrir: () => void; grande?: boolean; texto?: string }) {
   return (
     <button
       onClick={onAbrir}
@@ -199,7 +200,7 @@ export function BusquedaPildora({ onAbrir, grande }: { onAbrir: () => void; gran
         grande ? 'h-14 max-w-xl py-1 pr-1 pl-5 text-[16px]' : 'h-12 py-1 pr-1 pl-5 text-[15px] sm:max-w-md',
       )}
     >
-      <span className="truncate">Buscar docentes, grupos o módulos</span>
+      <span className="truncate">{texto}</span>
       <kbd className="ml-auto hidden rounded-full border border-line px-2 py-0.5 font-sans text-[11px] text-muted sm:inline">Ctrl K</kbd>
       <span
         className={cx(

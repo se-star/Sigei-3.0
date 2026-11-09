@@ -28,9 +28,10 @@ type Nivel = 'no' | 'ver' | 'editar';
 
 const MATRIZ: Record<Modulo, Record<Rol, Nivel>> = {
   inicio: { admin: 'editar', rector: 'editar', coordinador: 'editar', docente: 'ver' },
-  docentes: { admin: 'editar', rector: 'editar', coordinador: 'editar', docente: 'ver' },
-  grupos: { admin: 'editar', rector: 'editar', coordinador: 'editar', docente: 'ver' },
-  asignacion: { admin: 'editar', rector: 'editar', coordinador: 'editar', docente: 'ver' },
+  docentes: { admin: 'editar', rector: 'editar', coordinador: 'editar', docente: 'no' },
+  grupos: { admin: 'editar', rector: 'editar', coordinador: 'editar', docente: 'no' },
+  asignacion: { admin: 'editar', rector: 'editar', coordinador: 'editar', docente: 'no' },
+  // El docente ve solo su propio horario.
   horarios: { admin: 'editar', rector: 'editar', coordinador: 'editar', docente: 'ver' },
   // Los docentes pueden radicar sus propias novedades; solo directivos aprueban.
   novedades: { admin: 'editar', rector: 'editar', coordinador: 'editar', docente: 'ver' },
@@ -40,7 +41,7 @@ const MATRIZ: Record<Modulo, Record<Rol, Nivel>> = {
   tareas: { admin: 'editar', rector: 'editar', coordinador: 'editar', docente: 'editar' },
   reportes: { admin: 'editar', rector: 'editar', coordinador: 'editar', docente: 'no' },
   usuarios: { admin: 'editar', rector: 'ver', coordinador: 'no', docente: 'no' },
-  sedes: { admin: 'editar', rector: 'editar', coordinador: 'ver', docente: 'ver' },
+  sedes: { admin: 'editar', rector: 'editar', coordinador: 'ver', docente: 'no' },
   actividad: { admin: 'editar', rector: 'ver', coordinador: 'no', docente: 'no' },
   configuracion: { admin: 'editar', rector: 'editar', coordinador: 'no', docente: 'no' },
   instituciones: { admin: 'no', rector: 'no', coordinador: 'no', docente: 'no' },

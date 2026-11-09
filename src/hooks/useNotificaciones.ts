@@ -81,7 +81,7 @@ export function useNotificaciones() {
         tipo: 'cumple',
         titulo: `Hoy cumple años ${nombreDocente(d, true)}`,
         detalle: '¡Envíele un saludo!',
-        ruta: `/docentes/${d.id}`,
+        ruta: perfil.rol === 'docente' ? '/' : `/docentes/${d.id}`,
       });
     }
     for (const t of tareas.filter(

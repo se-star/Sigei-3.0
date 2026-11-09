@@ -1,4 +1,4 @@
-import type { Actividad, ID, MiInstitucion, Miembro, Nuevo, Perfil, ResumenInstitucion, Rol, Tabla, Tablas } from '../types';
+import type { Actividad, ID, MiInstitucion, Miembro, Nuevo, Perfil, ResumenInstitucion, Rol, Soporte, Tabla, Tablas } from '../types';
 
 /**
  * Contrato único de acceso a datos. La app nunca habla directamente con Supabase
@@ -25,6 +25,12 @@ export interface DataProvider {
   quitarMiembro(usuarioId: ID): Promise<void>;
   /** Agrega por correo a alguien ya registrado. */
   agregarMiembro(correo: string, rol: Rol): Promise<'agregado' | 'no_registrado'>;
+
+  /* Soportes de permisos (archivos privados) */
+  subirSoporte(archivo: File, docenteId: ID): Promise<Soporte>;
+  /** Enlace temporal para ver o descargar un soporte. */
+  urlSoporte(ruta: string): Promise<string>;
+  borrarSoportes(rutas: string[]): Promise<void>;
 
   /* Plataforma (superadministrador) */
   resumenInstituciones(): Promise<ResumenInstitucion[]>;
@@ -55,6 +61,10 @@ export interface AuthProvider {
   institucionesPublicas(): Promise<InstitucionPublica[]>;
   solicitarAcceso(institucionId: ID): Promise<void>;
   registrarse?(nombre: string, email: string, clave: string, institucionId?: ID): Promise<void>;
+  /** Docentes: envía un código al correo registrado para ese documento. Devuelve los correos enmascarados. */
+  solicitarCodigoDocente(documento: string): Promise<{ destinos: string[] }>;
+  /** Docentes: ingresa con el documento y el código recibido. */
+  ingresarConCodigo(documento: string, codigo: string): Promise<Sesion>;
   recuperarClave?(email: string): Promise<void>;
   /** Cambia la contraseña del usuario con sesión activa. */
   cambiarClave?(nueva: string): Promise<void>;
@@ -132,4 +142,36 @@ export function armarSesion(
     perfil,
     instituciones: instituciones.map(({ docente_id: _d, ...i }) => (void _d, i)),
   };
+}
+
+/* ───────── Soportes ───────── */
+
+export const SOPORTE_TIPOS = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+export const SOPORTE_MAX_BYTES = 5 * 1024 * 1024;
+export const SOPORTE_MAX_ARCHIVOS = 3;
+
+/** Valida un archivo antes de subirlo; devuelve el motivo si no sirve. */
+export function validarSoporte(f: { name: string; type: string; size: number }): string | null {
+  if (!SOPORTE_TIPOS.includes(f.type)) return `“${f.name}” no es PDF ni imagen (JPG, PNG o WEBP).`;
+  if (f.size > SOPORTE_MAX_BYTES) return `“${f.name}” pesa más de 5 MB.`;
+  if (f.size === 0) return `“${f.name}” está vacío.`;
+  return null;
+}
+
+/** Nombre seguro para guardar: sin tildes, espacios ni símbolos raros. */
+export function nombreSeguro(nombre: string): string {
+  const punto = nombre.lastIndexOf('.');
+  const base = (punto > 0 ? nombre.slice(0, punto) : nombre)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  const ext = punto > 0 ? nombre.slice(punto + 1).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) : '';
+  return (base || 'soporte') + (ext ? `.${ext}` : '');
+}
+
+/** Documento sin puntos, espacios ni guiones (así se guarda y se busca). */
+export function normalizarDocumento(d: string): string {
+  return d.trim().replace(/[.\s-]/g, '');
 }

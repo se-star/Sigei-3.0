@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { Actividad, ID, MiInstitucion, Miembro, Nuevo, ResumenInstitucion, Rol, Tabla, Tablas } from '../types';
+import type { Actividad, ID, MiInstitucion, Miembro, Nuevo, ResumenInstitucion, Rol, Soporte, Tabla, Tablas } from '../types';
 import { TABLAS_INSTITUCIONALES } from '../types';
-import { armarSesion, institucionGuardada, type AuthProvider, type DataProvider, type InstitucionPublica, type Sesion } from './provider';
+import { armarSesion, institucionGuardada, nombreSeguro, normalizarDocumento, type AuthProvider, type DataProvider, type InstitucionPublica, type Sesion } from './provider';
 import { esErrorDeRed, hostDe, mensajeSinConexion } from './conexion';
 
 /**
@@ -155,6 +155,30 @@ export class SupabaseDataProvider implements DataProvider {
     return data as 'agregado' | 'no_registrado';
   }
 
+  async subirSoporte(archivo: File, docenteId: ID): Promise<Soporte> {
+    const inst = this.exigirInstitucion();
+    const ruta = `${inst}/${docenteId}/${crypto.randomUUID().slice(0, 8)}-${nombreSeguro(archivo.name)}`;
+    const { error } = await this.sb.storage.from('soportes').upload(ruta, archivo, { contentType: archivo.type, upsert: false });
+    if (error) {
+      if (/bucket not found/i.test(error.message)) throw new Error('Falta activar los soportes: ejecute en Supabase la migración 0003_acceso_docentes.sql.');
+      if (/row-level security|unauthorized|403/i.test(error.message)) throw new Error('No tiene permiso para adjuntar soportes a esta solicitud.');
+      if (/exceeded|too large|413/i.test(error.message)) throw new Error(`“${archivo.name}” supera el tamaño permitido (5 MB).`);
+      throw traducir(error);
+    }
+    return { ruta, nombre: archivo.name, tipo: archivo.type, tamano: archivo.size };
+  }
+
+  async urlSoporte(ruta: string): Promise<string> {
+    const { data, error } = await this.sb.storage.from('soportes').createSignedUrl(ruta, 300);
+    if (error || !data) throw new Error('No fue posible abrir el soporte. Puede que ya no exista o que no tenga permiso para verlo.');
+    return data.signedUrl;
+  }
+
+  async borrarSoportes(rutas: string[]) {
+    if (!rutas.length) return;
+    await this.sb.storage.from('soportes').remove(rutas);
+  }
+
   async resumenInstituciones(): Promise<ResumenInstitucion[]> {
     const { data, error } = await this.sb.rpc('resumen_instituciones');
     fallo(error);
@@ -209,6 +233,11 @@ export class SupabaseAuthProvider implements AuthProvider {
 
   /** Arma la sesión: perfil global + instituciones con su rol en cada una. */
   private async perfilDe(userId: string, preferida?: ID | null): Promise<Sesion | null> {
+    // Vincula la cuenta con los registros docentes que tengan su correo (si la base ya tiene la función).
+    await this.sb.rpc('vincular_mis_docentes').then(
+      () => undefined,
+      () => undefined,
+    );
     const { data: p, error } = await this.sb.from('perfiles').select('id, nombre, email, es_superadmin').eq('id', userId).maybeSingle();
     if (error) {
       if (/column .*es_superadmin|does not exist/i.test(error.message))
@@ -298,6 +327,48 @@ export class SupabaseAuthProvider implements AuthProvider {
     const { error } = await this.sb.from('membresias').insert({ usuario_id: await this.usuarioId(), institucion_id: institucionId });
     if (error?.code === '23505') throw new Error('Ya tiene acceso o una solicitud pendiente en esa institución.');
     fallo(error);
+  }
+
+  /** Llama a la función del servidor acceso-docente y traduce sus errores. */
+  private async accesoDocente<T>(cuerpo: Record<string, string>): Promise<T> {
+    const { data, error } = await this.sb.functions.invoke('acceso-docente', { body: cuerpo });
+    if (error) {
+      const ctx = (error as { context?: Response }).context;
+      let mensaje = '';
+      let estado = 0;
+      if (ctx && typeof ctx.json === 'function') {
+        estado = ctx.status;
+        try {
+          const j = await ctx.json();
+          mensaje = j?.error ?? j?.message ?? '';
+        } catch {
+          /* respuesta sin JSON */
+        }
+      }
+      if (estado === 404 && /function was not found|not found/i.test(mensaje))
+        throw new Error('El ingreso con documento aún no está activado. Pida a la administración de SIGEI que instale la función acceso-docente.');
+      if (mensaje) throw new Error(mensaje);
+      if (esErrorDeRed(error)) throw traducir(error);
+      throw new Error('No fue posible completar el ingreso. Intente de nuevo en un momento.');
+    }
+    return data as T;
+  }
+
+  async solicitarCodigoDocente(documento: string) {
+    return this.accesoDocente<{ destinos: string[] }>({ accion: 'enviar', documento: normalizarDocumento(documento) });
+  }
+
+  async ingresarConCodigo(documento: string, codigo: string): Promise<Sesion> {
+    const t = await this.accesoDocente<{ access_token: string; refresh_token: string }>({
+      accion: 'verificar',
+      documento: normalizarDocumento(documento),
+      codigo: codigo.replace(/\D/g, ''),
+    });
+    const { data, error } = await this.sb.auth.setSession({ access_token: t.access_token, refresh_token: t.refresh_token });
+    if (error || !data.user) throw new Error('No fue posible abrir la sesión. Pida un código nuevo.');
+    const sesion = await this.perfilDe(data.user.id);
+    if (!sesion) throw new Error('Su usuario no tiene un perfil en SIGEI.');
+    return sesion;
   }
 
   async registrarse(nombre: string, email: string, clave: string, institucionId?: ID) {

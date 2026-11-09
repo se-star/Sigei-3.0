@@ -41,6 +41,15 @@ SIGEI es una plataforma compartida: varias instituciones educativas trabajan en 
 - **Acceso**: al registrarse, la persona elige su institución y queda pendiente hasta que el administrador de esa institución la active. Desde *Mi perfil* puede pedir acceso a otras.
 - La separación se aplica en la base de datos: las políticas RLS impiden leer o escribir datos de otra institución, e incluso relacionar registros entre instituciones.
 
+### Espacio del docente
+
+Cada docente tiene su cuenta en SIGEI y entra con su **número de documento**: recibe un código de 6 dígitos en el correo que la institución registró y con él ingresa, sin contraseña. Su cuenta queda vinculada sola con su registro (en todas las instituciones donde esté registrado con ese correo).
+
+- **Inicio**: próxima clase, clases del día, sus solicitudes, actividades del mes, comunicados y tareas.
+- **Mi horario**: su semana de clases, imprimible y exportable al calendario del celular (.ics).
+- **Mis permisos**: solicitudes con soportes adjuntos (PDF o foto, hasta 5 MB, privados).
+- **Actividades**, **Comunicados**, **Mi seguimiento** (lo socializado con él) y **Tareas**.
+
 ### Roles (dentro de cada institución)
 
 | Rol | Alcance |
@@ -81,6 +90,14 @@ Abra la dirección que aparece en la terminal y elija un rol. El modo demo trae 
    - **La primera cuenta registrada queda como superadministrador** de la plataforma.
    - Las siguientes eligen su institución al registrarse y quedan pendientes hasta que el administrador de esa institución las active en *Usuarios y roles*.
 6. Opcional: para empezar con datos, descargue un respaldo desde el modo demo y cárguelo en *Configuración → Respaldo*. Los registros se copian con identificadores nuevos, así que el mismo respaldo sirve para varias instituciones.
+
+#### Ingreso de docentes con documento
+
+1. Ejecute también `supabase/migrations/0003_acceso_docentes.sql` (vinculación automática y soportes).
+2. **Función del servidor**: en **Edge Functions → Deploy a new function → Via Editor**, nómbrela `acceso-docente`, pegue el contenido de `supabase/functions/acceso-docente/index.ts`, despliéguela y, en su configuración, **desactive "Verify JWT"** (la usan personas que aún no han ingresado).
+3. **Correo propio** (obligatorio para que los códigos lleguen a todos los docentes): en **Authentication → Emails → SMTP Settings** configure un servicio como Gmail (con contraseña de aplicación) o Resend.
+4. **Plantillas**: en **Authentication → Emails**, en *Magic Link* y en *Confirm signup*, incluya el código con `{{ .Token }}`. Por ejemplo: «Su código para ingresar a SIGEI es {{ .Token }}. Vence en una hora.»
+5. Registre a cada docente en *Docentes* con su documento y su correo. La columna *Acceso a SIGEI* muestra quién ya ingresó y a quién le falta el correo.
 
 > En **Authentication → URL Configuration** ponga como *Site URL* la dirección publicada (por ejemplo `https://se-star.github.io/Sigei-3.0/`) y agréguela también en *Redirect URLs*, junto con `http://localhost:5173/` si va a trabajar en local. Así funcionan los correos de confirmación y de recuperación de contraseña. Quien llega desde el enlace de recuperación ve una pantalla para crear su contraseña nueva; con sesión iniciada también se puede cambiar desde *Mi perfil*.
 

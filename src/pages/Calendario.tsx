@@ -97,8 +97,8 @@ export default function Calendario() {
   return (
     <>
       <Encabezado
-        titulo="Calendario institucional"
-        descripcion="Cronograma de actividades, reuniones y fechas clave del año lectivo."
+        titulo={puede ? 'Calendario institucional' : 'Actividades académicas'}
+        descripcion={puede ? 'Cronograma de actividades, reuniones y fechas clave del año lectivo.' : 'Las actividades y fechas clave de su institución, mes a mes.'}
         acciones={
           <>
             <Boton variante="secundario" icono={<Download className="size-4" />} onClick={() => exportarICS(filtrados, 'Calendario institucional')} title="Importe el archivo en Google Calendar u Outlook">

@@ -159,6 +159,15 @@ export interface Novedad extends Base {
   revisado_en: string | null;
   observacion_revision: string;
   creado_por: ID | null;
+  /** Archivos de soporte (incapacidad, citación…), guardados en un espacio privado. */
+  soportes?: Soporte[];
+}
+
+export interface Soporte {
+  ruta: string;
+  nombre: string;
+  tipo: string;
+  tamano: number;
 }
 
 export type TipoSeguimiento = 'visita_aula' | 'planeacion' | 'evaluacion' | 'entrevista' | 'otro';
