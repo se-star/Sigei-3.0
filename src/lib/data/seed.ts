@@ -1,5 +1,4 @@
 import type {
-  Ajustes,
   Area,
   Asignacion,
   Asignatura,
@@ -10,8 +9,8 @@ import type {
   Evento,
   Grado,
   Grupo,
+  Institucion,
   Novedad,
-  Perfil,
   Sede,
   Seguimiento,
   Tarea,
@@ -58,21 +57,60 @@ function habil(n: number) {
 }
 
 let contador = 0;
-const id = (p: string) => `${p}-${(++contador).toString().padStart(3, '0')}`;
+let prefijo = '';
+const id = (p: string) => `${prefijo}${p}-${(++contador).toString().padStart(3, '0')}`;
 
-export function crearDatosDemo() {
+export interface ConfigDemo {
+  /** Identificador de la institución; también se usa como prefijo de los ids. */
+  inst: string;
+  nombre: string;
+  sigla: string;
+  municipio: string;
+  dominio: string;
+  sedes: [string, string];
+  /** Apellidos alternativos por primer nombre, para que cada colegio tenga su equipo. */
+  apellidos?: Record<string, string>;
+}
+
+export const DEMO_ALMENDROS: ConfigDemo = {
+  inst: 'iela',
+  nombre: 'Institución Educativa Los Almendros',
+  sigla: 'IELA',
+  municipio: 'Medellín, Antioquia',
+  dominio: 'iela.edu.co',
+  sedes: ['Sede Principal', 'Sede La Esperanza'],
+};
+
+export const DEMO_SAN_RAFAEL: ConfigDemo = {
+  inst: 'iesr',
+  nombre: 'Institución Educativa San Rafael',
+  sigla: 'IESR',
+  municipio: 'Envigado, Antioquia',
+  dominio: 'iesr.edu.co',
+  sedes: ['Sede Central', 'Sede El Portal'],
+  // Laura Restrepo trabaja en ambas instituciones; el resto del equipo es distinto.
+  apellidos: {
+    Andrés: 'Gómez Patiño', Diana: 'Arias Bedoya', 'Juan Camilo': 'Mesa Rojas', Sandra: 'Cano Vargas',
+    Carlos: 'Hoyos Tabares', Paola: 'Úsuga Marín', Jorge: 'Franco Lema', Natalia: 'Pineda Soto',
+    Esteban: 'Rúa Cárdenas', Valentina: 'Osorio Lince', Héctor: 'Vahos Ramírez', Mónica: 'Uribe Ángel', Gustavo: 'Tobón Mira',
+  },
+};
+
+export function crearDatosDemo(cfg: ConfigDemo = DEMO_ALMENDROS) {
   contador = 0;
+  prefijo = `${cfg.inst}-`;
   const anio = new Date().getFullYear();
 
-  const ajustes: Ajustes[] = [
+  const instituciones: Institucion[] = [
     {
-      id: 'ajustes',
-      institucion: 'Institución Educativa Los Almendros',
-      sigla: 'IELA',
+      id: cfg.inst,
+      nombre: cfg.nombre,
+      activa: true,
+      sigla: cfg.sigla,
       codigo_dane: '105001000000',
       nit: '900.000.000-0',
-      municipio: 'Medellín, Antioquia',
-      rector: 'Rectoría IELA',
+      municipio: cfg.municipio,
+      rector: `Rectoría ${cfg.sigla}`,
       anio_lectivo: anio,
       periodos: 3,
       logo_url: '',
@@ -82,8 +120,8 @@ export function crearDatosDemo() {
   ];
 
   const sedes: Sede[] = [
-    { id: id('sed'), nombre: 'Sede Principal', direccion: 'Calle 45 # 12-30', telefono: '604 444 0000', email: 'principal@iela.edu.co', principal: true },
-    { id: id('sed'), nombre: 'Sede La Esperanza', direccion: 'Carrera 80 # 32-10', telefono: '604 444 0001', email: 'esperanza@iela.edu.co', principal: false },
+    { id: id('sed'), nombre: cfg.sedes[0], direccion: 'Calle 45 # 12-30', telefono: '604 444 0000', email: `principal@${cfg.dominio}`, principal: true },
+    { id: id('sed'), nombre: cfg.sedes[1], direccion: 'Carrera 80 # 32-10', telefono: '604 444 0001', email: `sede2@${cfg.dominio}`, principal: false },
   ];
 
   const areaDefs: [string, string, string[]][] = [
@@ -123,12 +161,16 @@ export function crearDatosDemo() {
     ['Mónica', 'Toro Jaramillo', 'Humanidades', 'F', 'Coordinadora académica', 'planta', 'activo', 10, 1],
     ['Gustavo Adolfo', 'Pérez Lopera', 'Matemáticas', 'M', 'Docente de aula', 'planta', 'retirado', 0, 15],
   ];
+  for (const d of docDefs) {
+    const alterno = cfg.apellidos?.[d[0]] ?? cfg.apellidos?.[d[0].split(' ')[0]];
+    if (alterno) d[1] = alterno;
+  }
   const docentes: Docente[] = docDefs.map(([nombres, apellidos, ar, genero, cargo, vinculacion, estado, mes, dia], i) => ({
     id: id('doc'),
     documento: String(43000000 + i * 137911),
     nombres,
     apellidos,
-    email: `${nombres.split(' ')[0].toLowerCase()}.${apellidos.split(' ')[0].toLowerCase()}@iela.edu.co`
+    email: `${nombres.split(' ')[0].toLowerCase()}.${apellidos.split(' ')[0].toLowerCase()}@${cfg.dominio}`
       .normalize('NFD')
       .replace(/[̀-ͯ]/g, ''),
     telefono: `300 ${String(1000000 + i * 54321).slice(0, 3)} ${String(1000 + i * 77).slice(0, 4)}`,
@@ -286,10 +328,8 @@ export function crearDatosDemo() {
     { id: id('tar'), titulo: 'Actualizar directorio de docentes', descripcion: '', estado: 'hecha', prioridad: 'baja', fecha_limite: enDias(-2), responsable_id: null, creado_por: null },
   ];
 
-  const perfiles: Perfil[] = [];
-
-  return {
-    ajustes,
+  const datos = {
+    instituciones,
     sedes,
     areas,
     asignaturas,
@@ -303,6 +343,11 @@ export function crearDatosDemo() {
     eventos,
     comunicados,
     tareas,
-    perfiles,
   };
+  // Cada registro queda marcado con su institución.
+  for (const [tabla, filas] of Object.entries(datos)) {
+    if (tabla === 'instituciones') continue;
+    for (const f of filas as { institucion_id?: string }[]) f.institucion_id = cfg.inst;
+  }
+  return datos;
 }

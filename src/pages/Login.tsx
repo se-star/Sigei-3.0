@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react';
-import { ArrowRight, Bell, Check, Clock3, GraduationCap, ShieldCheck, UserRound, Users } from 'lucide-react';
-import { Boton, Campo, Entrada } from '@/components/ui';
+import { useEffect, useState, type FormEvent } from 'react';
+import type { InstitucionPublica } from '@/lib/data/provider';
+import { ArrowRight, Bell, Check, Clock3, GraduationCap, Landmark, ShieldCheck, UserRound, Users } from 'lucide-react';
+import { Boton, Campo, Entrada, Selector } from '@/components/ui';
 import { Logo, Wordmark } from '@/components/layout/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
@@ -8,11 +9,12 @@ import { backend, modoDemo, servidorDatos } from '@/lib/backend';
 import type { Rol } from '@/lib/types';
 import { cx } from '@/lib/utils';
 
-const ROLES_DEMO: { rol: Rol; titulo: string; texto: string; icono: typeof Users }[] = [
-  { rol: 'admin', titulo: 'Administrador', texto: 'Acceso total, usuarios y configuración', icono: ShieldCheck },
+const ROLES_DEMO: { rol: Rol | 'superadmin'; titulo: string; texto: string; icono: typeof Users }[] = [
+  { rol: 'superadmin', titulo: 'Superadministrador', texto: 'Todas las instituciones de la plataforma', icono: Landmark },
+  { rol: 'admin', titulo: 'Administrador', texto: 'Una institución: usuarios y configuración', icono: ShieldCheck },
   { rol: 'rector', titulo: 'Rectoría', texto: 'Gestión institucional y aprobaciones', icono: GraduationCap },
-  { rol: 'coordinador', titulo: 'Coordinación', texto: 'Horarios, novedades y seguimiento', icono: Users },
-  { rol: 'docente', titulo: 'Docente', texto: 'Su horario, permisos y comunicados', icono: UserRound },
+  { rol: 'coordinador', titulo: 'Coordinación', texto: 'Trabaja en dos instituciones', icono: Users },
+  { rol: 'docente', titulo: 'Docente', texto: 'Su horario y permisos, en dos colegios', icono: UserRound },
 ];
 
 export default function Login() {
@@ -95,8 +97,8 @@ function Constelacion() {
 function AccesoDemo() {
   const { ingresarDemo } = useAuth();
   const toast = useToast();
-  const [cargando, setCargando] = useState<Rol | null>(null);
-  const entrar = async (rol: Rol) => {
+  const [cargando, setCargando] = useState<Rol | 'superadmin' | null>(null);
+  const entrar = async (rol: Rol | 'superadmin') => {
     setCargando(rol);
     try {
       await ingresarDemo(rol);
@@ -145,7 +147,14 @@ function AccesoNube() {
   const [email, setEmail] = useState('');
   const [clave, setClave] = useState('');
   const [nombre, setNombre] = useState('');
+  const [inst, setInst] = useState('');
+  const [instituciones, setInstituciones] = useState<InstitucionPublica[] | null>(null);
   const [cargando, setCargando] = useState(false);
+
+  useEffect(() => {
+    if (modo === 'registro' && instituciones === null)
+      backend.auth.institucionesPublicas().then(setInstituciones).catch(() => setInstituciones([]));
+  }, [modo, instituciones]);
   const [mensaje, setMensaje] = useState('');
 
   const enviar = async (e: FormEvent) => {
@@ -155,8 +164,13 @@ function AccesoNube() {
     try {
       if (modo === 'entrar') await ingresar(email.trim(), clave);
       if (modo === 'registro') {
-        await backend.auth.registrarse?.(nombre.trim(), email.trim(), clave);
-        setMensaje('Solicitud enviada. Confirme su correo; la administración activará su cuenta y le asignará un rol.');
+        if (instituciones?.length && !inst) throw new Error('Elija la institución en la que trabaja.');
+        await backend.auth.registrarse?.(nombre.trim(), email.trim(), clave, inst || undefined);
+        setMensaje(
+          instituciones?.length
+            ? 'Solicitud enviada. Confirme su correo; el administrador de su institución activará su cuenta y le asignará un rol.'
+            : 'Cuenta creada. Confirme su correo e ingrese: usted será el superadministrador de la plataforma.',
+        );
         setModo('entrar');
       }
       if (modo === 'recuperar') {
@@ -185,6 +199,21 @@ function AccesoNube() {
         {modo === 'registro' && (
           <Campo etiqueta="Nombre completo" requerido>
             {(id) => <Entrada id={id} value={nombre} onChange={(e) => setNombre(e.target.value)} required autoComplete="name" />}
+          </Campo>
+        )}
+        {modo === 'registro' && !!instituciones?.length && (
+          <Campo etiqueta="Institución en la que trabaja" requerido ayuda="Si trabaja en varias, después podrá pedir acceso a las demás desde Mi perfil.">
+            {(id) => (
+              <Selector id={id} value={inst} onChange={(e) => setInst(e.target.value)} required>
+                <option value="">Elija su institución…</option>
+                {instituciones.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.nombre}
+                    {i.municipio ? ` · ${i.municipio}` : ''}
+                  </option>
+                ))}
+              </Selector>
+            )}
           </Campo>
         )}
         <Campo etiqueta="Correo electrónico" requerido>

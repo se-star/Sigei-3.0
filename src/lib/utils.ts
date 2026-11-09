@@ -140,6 +140,12 @@ export function iniciales(nombre: string): string {
   return (partes[0][0] + partes[partes.length > 2 ? 2 : 1][0]).toUpperCase();
 }
 
+/** Abreviatura para el distintivo de una institución: su sigla (hasta 4 letras) o sus iniciales. */
+export function abreviatura(i: { sigla?: string; nombre: string }): string {
+  const sigla = (i.sigla ?? '').trim();
+  return sigla ? sigla.slice(0, 4).toUpperCase() : iniciales(i.nombre);
+}
+
 export function nombreGrupo(g: Grupo | undefined, grados: Grado[]): string {
   if (!g) return '—';
   const gr = grados.find((x) => x.id === g.grado_id);

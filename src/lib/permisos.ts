@@ -20,7 +20,9 @@ export type Modulo =
   | 'usuarios'
   | 'sedes'
   | 'actividad'
-  | 'configuracion';
+  | 'configuracion'
+  /** Panel de la plataforma: solo superadministrador (se resuelve en useAuth). */
+  | 'instituciones';
 
 type Nivel = 'no' | 'ver' | 'editar';
 
@@ -41,6 +43,7 @@ const MATRIZ: Record<Modulo, Record<Rol, Nivel>> = {
   sedes: { admin: 'editar', rector: 'editar', coordinador: 'ver', docente: 'ver' },
   actividad: { admin: 'editar', rector: 'ver', coordinador: 'no', docente: 'no' },
   configuracion: { admin: 'editar', rector: 'editar', coordinador: 'no', docente: 'no' },
+  instituciones: { admin: 'no', rector: 'no', coordinador: 'no', docente: 'no' },
 };
 
 export function puedeVer(rol: Rol | undefined, m: Modulo): boolean {
@@ -60,4 +63,4 @@ export function nivel(rol: Rol, m: Modulo): Nivel {
   return MATRIZ[m][rol];
 }
 
-export const MODULOS = Object.keys(MATRIZ) as Modulo[];
+export const MODULOS = (Object.keys(MATRIZ) as Modulo[]).filter((m) => m !== 'instituciones');

@@ -1,31 +1,34 @@
 import { useState } from 'react';
-import { Check, Info, Minus, Pencil, ShieldCheck, Eye } from 'lucide-react';
-import { Avatar, Boton, Campo, Cargando, Encabezado, Insignia, Interruptor, Modal, Segmentos, Selector, Tarjeta, Vacio } from '@/components/ui';
+import { Check, Info, Minus, Pencil, ShieldCheck, Eye, UserPlus, UserMinus } from 'lucide-react';
+import { Avatar, Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Interruptor, Modal, Segmentos, Selector, Tarjeta, Vacio } from '@/components/ui';
 import { Buscador } from '@/components/ui/Buscador';
 import { Tabla, type Columna } from '@/components/ui/Tabla';
 import { useAuth } from '@/hooks/useAuth';
-import { useMutar, useTabla } from '@/hooks/useDatos';
+import { useAjustes, useMiembros, useMutarMiembros, useTabla } from '@/hooks/useDatos';
+import { useConfirmar } from '@/hooks/useConfirmar';
 import { useToast } from '@/hooks/useToast';
 import { modoDemo } from '@/lib/backend';
 import { etiqueta, ROLES, tono } from '@/lib/catalogos';
 import { MODULOS, nivel, type Modulo } from '@/lib/permisos';
 import { TODOS_ITEMS } from '@/components/layout/navegacion';
-import type { Perfil, Rol } from '@/lib/types';
+import type { Miembro, Rol } from '@/lib/types';
 import { coincide, nombreDocente } from '@/lib/utils';
 
 export default function Usuarios() {
   const { editar, perfil: yo } = useAuth();
   const puede = editar('usuarios');
-  const { data: perfiles, isLoading } = useTabla('perfiles');
+  const ajustes = useAjustes();
+  const { data: perfiles, isLoading } = useMiembros();
   const { data: docentes = [] } = useTabla('docentes');
   const [vista, setVista] = useState<'usuarios' | 'permisos'>('usuarios');
   const [q, setQ] = useState('');
-  const [sel, setSel] = useState<Perfil | null>(null);
+  const [sel, setSel] = useState<Miembro | null>(null);
+  const [agregar, setAgregar] = useState(false);
 
   const lista = (perfiles ?? []).filter((p) => coincide(q, p.nombre, p.email)).sort((a, b) => Number(b.activo) - Number(a.activo) || a.nombre.localeCompare(b.nombre));
   const pendientes = (perfiles ?? []).filter((p) => !p.activo).length;
 
-  const columnas: Columna<Perfil>[] = [
+  const columnas: Columna<Miembro>[] = [
     {
       id: 'nombre',
       titulo: 'Usuario',
@@ -77,8 +80,17 @@ export default function Usuarios() {
     <>
       <Encabezado
         titulo="Usuarios y roles"
-        descripcion="Quién puede ingresar a SIGEI y qué puede hacer cada rol."
-        acciones={<Segmentos valor={vista} onCambio={setVista} opciones={[{ valor: 'usuarios', etiqueta: 'Usuarios' }, { valor: 'permisos', etiqueta: 'Permisos por rol' }]} />}
+        descripcion={`Quién puede ingresar a ${ajustes.sigla || ajustes.nombre} y qué puede hacer cada rol.`}
+        acciones={
+          <>
+            <Segmentos valor={vista} onCambio={setVista} opciones={[{ valor: 'usuarios', etiqueta: 'Usuarios' }, { valor: 'permisos', etiqueta: 'Permisos por rol' }]} />
+            {puede && vista === 'usuarios' && (
+              <Boton icono={<UserPlus className="size-4" />} onClick={() => setAgregar(true)}>
+                Agregar persona
+              </Boton>
+            )}
+          </>
+        }
       />
 
       {vista === 'usuarios' ? (
@@ -87,9 +99,9 @@ export default function Usuarios() {
             <Info className="size-5 shrink-0 text-info" />
             <p>
               {modoDemo
-                ? 'En modo demo los usuarios se crean al ingresar con cada rol. Con Supabase, las personas solicitan acceso desde la pantalla de ingreso y aquí usted las activa y les asigna un rol.'
-                : 'Las personas solicitan acceso desde la pantalla de ingreso. Active su cuenta, asígnele un rol y, si es docente, vincúlela con su registro en el directorio.'}
-              {pendientes > 0 && <strong className="ml-1">Hay {pendientes} cuentas esperando activación.</strong>}
+                ? 'En modo demo los usuarios se crean al ingresar con cada rol. Con Supabase, las personas solicitan acceso a esta institución desde la pantalla de ingreso y aquí usted las activa y les asigna un rol.'
+                : 'Las personas solicitan acceso a esta institución desde la pantalla de ingreso, o usted las agrega por correo si ya tienen cuenta en SIGEI. Una misma persona puede tener un rol distinto en cada institución.'}
+              {pendientes > 0 && <strong className="ml-1">Hay {pendientes} solicitudes esperando activación.</strong>}
             </p>
           </div>
           <Buscador valor={q} onCambio={setQ} placeholder="Buscar usuario" className="mb-4 sm:max-w-sm" />
@@ -106,6 +118,7 @@ export default function Usuarios() {
       )}
 
       <FormUsuario perfil={sel} onCerrar={() => setSel(null)} esYo={sel?.id === yo?.id} />
+      <AgregarPersona abierto={agregar} onCerrar={() => setAgregar(false)} />
     </>
   );
 }
@@ -161,9 +174,10 @@ function MatrizPermisos() {
   );
 }
 
-function FormUsuario({ perfil, onCerrar, esYo }: { perfil: Perfil | null; onCerrar: () => void; esYo: boolean }) {
+function FormUsuario({ perfil, onCerrar, esYo }: { perfil: Miembro | null; onCerrar: () => void; esYo: boolean }) {
   const { data: docentes = [] } = useTabla('docentes');
-  const { editar } = useMutar('perfiles');
+  const { actualizar, quitar } = useMutarMiembros();
+  const confirmar = useConfirmar();
   const toast = useToast();
   const [rol, setRol] = useState<Rol>('docente');
   const [activo, setActivo] = useState(true);
@@ -176,13 +190,30 @@ function FormUsuario({ perfil, onCerrar, esYo }: { perfil: Perfil | null; onCerr
     setDoc(perfil.docente_id ?? '');
   }
   if (!perfil) return null;
+  const cerrar = () => (setPrevio(null), onCerrar());
 
   const guardar = async () => {
     try {
-      await editar.mutateAsync({ id: perfil.id, cambios: { rol, activo, docente_id: doc || null } });
-      toast.ok('Usuario actualizado.');
-      setPrevio(null);
-      onCerrar();
+      await actualizar.mutateAsync({ id: perfil.id, cambios: { rol, activo, docente_id: doc || null } });
+      toast.ok(perfil.activo || !activo ? 'Usuario actualizado.' : `${perfil.nombre} ya puede ingresar.`);
+      cerrar();
+    } catch (e) {
+      toast.error(e);
+    }
+  };
+
+  const retirar = async () => {
+    const ok = await confirmar({
+      titulo: 'Quitar de la institución',
+      texto: `${perfil.nombre} dejará de tener acceso a esta institución. Su cuenta y su acceso a otras instituciones se conservan.`,
+      confirmar: 'Quitar',
+      peligro: true,
+    });
+    if (!ok) return;
+    try {
+      await quitar.mutateAsync(perfil.id);
+      toast.ok('Persona retirada de la institución.');
+      cerrar();
     } catch (e) {
       toast.error(e);
     }
@@ -191,23 +222,28 @@ function FormUsuario({ perfil, onCerrar, esYo }: { perfil: Perfil | null; onCerr
   return (
     <Modal
       abierto
-      onCerrar={() => (setPrevio(null), onCerrar())}
+      onCerrar={cerrar}
       titulo={perfil.nombre}
       descripcion={perfil.email}
       ancho="sm"
       pie={
         <>
-          <Boton variante="secundario" onClick={() => (setPrevio(null), onCerrar())}>
+          {!esYo && (
+            <Boton variante="fantasma" className="mr-auto text-danger hover:bg-danger-soft" icono={<UserMinus className="size-4" />} onClick={retirar}>
+              Quitar
+            </Boton>
+          )}
+          <Boton variante="secundario" onClick={cerrar}>
             Cancelar
           </Boton>
-          <Boton onClick={guardar} cargando={editar.isPending}>
-            Guardar
+          <Boton onClick={guardar} cargando={actualizar.isPending}>
+            {!perfil.activo && activo ? 'Activar' : 'Guardar'}
           </Boton>
         </>
       }
     >
       <div className="flex flex-col gap-5">
-        <Campo etiqueta="Rol" ayuda={esYo ? 'No puede cambiar su propio rol.' : undefined}>
+        <Campo etiqueta="Rol en esta institución" ayuda={esYo ? 'No puede cambiar su propio rol.' : undefined}>
           {(id) => (
             <Selector id={id} value={rol} onChange={(e) => setRol(e.target.value as Rol)} disabled={esYo}>
               {ROLES.map((r) => (
@@ -218,7 +254,7 @@ function FormUsuario({ perfil, onCerrar, esYo }: { perfil: Perfil | null; onCerr
             </Selector>
           )}
         </Campo>
-        <Campo etiqueta="Docente vinculado" ayuda="Permite que la persona vea su horario y radique sus novedades.">
+        <Campo etiqueta="Docente vinculado" ayuda="Permite que la persona vea su horario y radique sus novedades en esta institución.">
           {(id) => (
             <Selector id={id} value={doc} onChange={(e) => setDoc(e.target.value)}>
               <option value="">Ninguno</option>
@@ -232,8 +268,71 @@ function FormUsuario({ perfil, onCerrar, esYo }: { perfil: Perfil | null; onCerr
             </Selector>
           )}
         </Campo>
-        {!esYo && <Interruptor activo={activo} onCambio={setActivo} etiqueta="Cuenta activa" descripcion="Si se desactiva, la persona no podrá ingresar." />}
+        {!esYo && <Interruptor activo={activo} onCambio={setActivo} etiqueta="Acceso activo" descripcion="Si se desactiva, la persona no podrá entrar a esta institución." />}
       </div>
+    </Modal>
+  );
+}
+
+function AgregarPersona({ abierto, onCerrar }: { abierto: boolean; onCerrar: () => void }) {
+  const { agregar } = useMutarMiembros();
+  const toast = useToast();
+  const [correo, setCorreo] = useState('');
+  const [rol, setRol] = useState<Rol>('docente');
+  const [aviso, setAviso] = useState('');
+
+  const enviar = async () => {
+    if (!/^\S+@\S+\.\S+$/.test(correo.trim())) return setAviso('Escriba un correo válido.');
+    setAviso('');
+    try {
+      const r = await agregar.mutateAsync({ correo: correo.trim(), rol });
+      if (r === 'no_registrado') {
+        setAviso('Ese correo aún no tiene cuenta en SIGEI. Pídale que use “Solicitar acceso” y elija esta institución; luego actívela aquí.');
+        return;
+      }
+      toast.ok('Persona agregada a la institución.');
+      setCorreo('');
+      onCerrar();
+    } catch (e) {
+      toast.error(e);
+    }
+  };
+
+  return (
+    <Modal
+      abierto={abierto}
+      onCerrar={onCerrar}
+      titulo="Agregar persona"
+      descripcion="Para quien ya tiene cuenta en SIGEI (por ejemplo, porque trabaja en otra institución)."
+      ancho="sm"
+      pie={
+        <>
+          <Boton variante="secundario" onClick={onCerrar}>
+            Cancelar
+          </Boton>
+          <Boton onClick={enviar} cargando={agregar.isPending}>
+            Agregar
+          </Boton>
+        </>
+      }
+    >
+      <form className="flex flex-col gap-4" onSubmit={(e) => (e.preventDefault(), enviar())}>
+        <Campo etiqueta="Correo electrónico" requerido error={aviso || undefined}>
+          {(id) => <Entrada id={id} type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} placeholder="nombre@colegio.edu.co" />}
+        </Campo>
+        <Campo etiqueta="Rol en esta institución">
+          {(id) => (
+            <Selector id={id} value={rol} onChange={(e) => setRol(e.target.value as Rol)}>
+              {ROLES.map((r) => (
+                <option key={r.valor} value={r.valor}>
+                  {r.etiqueta}
+                </option>
+              ))}
+            </Selector>
+          )}
+        </Campo>
+        <button type="submit" hidden />
+      </form>
     </Modal>
   );
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, ListTodo, Plus, Trash2, CalendarClock } from 'lucide-react';
 import { AreaTexto, Avatar, Boton, Campo, Encabezado, Entrada, Insignia, Modal, Segmentos, Selector } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
-import { useMutar, useTabla } from '@/hooks/useDatos';
+import { useMiembros, useMutar, useTabla } from '@/hooks/useDatos';
 import { useConfirmar } from '@/hooks/useConfirmar';
 import { useToast } from '@/hooks/useToast';
 import { ESTADOS_TAREA, etiqueta, PRIORIDADES, tono } from '@/lib/catalogos';
@@ -15,7 +15,7 @@ const PESO: Record<Prioridad, number> = { alta: 0, normal: 1, baja: 2 };
 export default function Tareas() {
   const { perfil } = useAuth();
   const { data: tareas = [] } = useTabla('tareas');
-  const { data: perfiles = [] } = useTabla('perfiles');
+  const { data: perfiles = [] } = useMiembros();
   const { editar } = useMutar('tareas');
   const toast = useToast();
   const [ambito, setAmbito] = useState<'mias' | 'todas'>('todas');
@@ -152,7 +152,7 @@ export default function Tareas() {
 
 function FormTarea({ abierto, tarea, estado, onCerrar }: { abierto: boolean; tarea?: Tarea; estado?: EstadoTarea; onCerrar: () => void }) {
   const { perfil } = useAuth();
-  const { data: perfiles = [] } = useTabla('perfiles');
+  const { data: perfiles = [] } = useMiembros();
   const { crear, editar, eliminar } = useMutar('tareas');
   const confirmar = useConfirmar();
   const toast = useToast();

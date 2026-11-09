@@ -21,17 +21,17 @@ import { NAVEGACION } from './navegacion';
 import { Paleta } from './Paleta';
 import { useAuth } from '@/hooks/useAuth';
 import { useTema, type Tema } from '@/hooks/useTema';
-import { useAjustes } from '@/hooks/useDatos';
+
 import { useNotificaciones, type Notificacion } from '@/hooks/useNotificaciones';
 import { Avatar } from '@/components/ui';
 import { etiqueta, ROLES } from '@/lib/catalogos';
 import { modoDemo } from '@/lib/backend';
 import { cx } from '@/lib/utils';
 import { Logo, Wordmark } from './Logo';
+import { SelectorInstitucion } from './SelectorInstitucion';
 
 export function Shell() {
   const { perfil, ver, salir } = useAuth();
-  const ajustes = useAjustes();
   const [colapsado, setColapsado] = useState(() => localStorage.getItem('sigei.menu') === 'mini');
   const [movil, setMovil] = useState(false);
   const [paleta, setPaleta] = useState(false);
@@ -69,7 +69,7 @@ export function Shell() {
         const items = g.items.filter((i) => ver(i.modulo));
         if (!items.length) return null;
         return (
-          <div key={g.grupo} className={cx('mt-5 first:mt-1', mini && 'mt-3 border-t border-line pt-3 first:border-0 first:pt-0')}>
+          <div key={g.grupo} className={cx('mt-5 first:mt-4', mini && 'mt-3 border-t border-line pt-3 first:border-0')}>
             {!mini && <p className="mb-1 px-3 text-xs font-medium text-muted">{g.grupo}</p>}
             <ul className={cx('flex flex-col gap-0.5', mini && 'items-center')}>
               {items.map((i) => (
@@ -105,7 +105,7 @@ export function Shell() {
       {!mini && (
         <span className="min-w-0">
           <Wordmark className="block text-[24px] leading-none" />
-          <span className="mt-1 block truncate text-xs text-muted">{ajustes.sigla || ajustes.institucion}</span>
+          <span className="mt-1 block truncate text-xs text-muted">Gestión educativa</span>
         </span>
       )}
     </NavLink>
@@ -121,6 +121,7 @@ export function Shell() {
         )}
       >
         {marca(colapsado)}
+        <SelectorInstitucion mini={colapsado} />
         {menu(colapsado)}
         <button
           onClick={() => setColapsado(!colapsado)}
@@ -148,6 +149,7 @@ export function Shell() {
               <X className="size-5" />
             </button>
             {marca(false)}
+            <SelectorInstitucion />
             {menu(false)}
           </aside>
         </div>
