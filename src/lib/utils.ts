@@ -1,4 +1,5 @@
-import type { BloqueHorario, Docente, Grado, Grupo, ID, Novedad } from './types';
+import type { BloqueHorario, Docente, FormatoGrupo, Grado, Grupo, ID, Novedad } from './types';
+import { GRADOS_COLOMBIA } from './catalogos';
 
 export function cx(...c: (string | false | null | undefined)[]): string {
   return c.filter(Boolean).join(' ');
@@ -150,6 +151,43 @@ export function nombreGrupo(g: Grupo | undefined, grados: Grado[]): string {
   if (!g) return '—';
   const gr = grados.find((x) => x.id === g.grado_id);
   return gr ? `${g.nombre} · ${gr.nombre}` : g.nombre;
+}
+
+/** Grado del catálogo colombiano que corresponde a un nombre (sin importar tildes ni mayúsculas). */
+export function gradoDelCatalogo(nombre: string) {
+  const n = norm(nombre).trim();
+  return GRADOS_COLOMBIA.find((g) => norm(g.nombre) === n);
+}
+
+/**
+ * Nombre que corresponde al grupo número n de un grado, según el formato de la
+ * institución: 6°1, 601, 6A o 6-1. Devuelve null si el grado no es del catálogo.
+ */
+export function nombreGrupoSegun(gradoNombre: string, n: number, formato: FormatoGrupo): string | null {
+  const g = gradoDelCatalogo(gradoNombre);
+  if (!g) return null;
+  const c = g.codigo;
+  switch (formato) {
+    case 'numero':
+      return `${c}${String(n).padStart(2, '0')}`;
+    case 'letra':
+      return `${c}${String.fromCharCode(64 + Math.min(n, 26))}`;
+    case 'guion':
+      return `${c}-${n}`;
+    default:
+      return `${c}°${n}`;
+  }
+}
+
+/** Siguiente nombre libre para un grupo nuevo del grado (o null si no se puede sugerir). */
+export function sugerirNombreGrupo(gradoNombre: string, existentes: string[], formato: FormatoGrupo): string | null {
+  const usados = new Set(existentes.map((e) => norm(e).replace(/\s/g, '')));
+  for (let n = 1; n <= 26; n++) {
+    const nombre = nombreGrupoSegun(gradoNombre, n, formato);
+    if (!nombre) return null;
+    if (!usados.has(norm(nombre))) return nombre;
+  }
+  return null;
 }
 
 export function porId<T extends { id: ID }>(lista: T[] | undefined): Map<ID, T> {

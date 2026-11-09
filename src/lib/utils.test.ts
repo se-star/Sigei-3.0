@@ -79,3 +79,22 @@ describe('permisos', () => {
     expect(puedeVer(undefined, 'inicio')).toBe(false);
   });
 });
+
+describe('nombres de grupos', () => {
+  it('sigue el formato de la institución', async () => {
+    const { nombreGrupoSegun } = await import('./utils');
+    expect(nombreGrupoSegun('Sexto', 1, 'grado')).toBe('6°1');
+    expect(nombreGrupoSegun('Undécimo', 2, 'numero')).toBe('1102');
+    expect(nombreGrupoSegun('séptimo', 3, 'letra')).toBe('7C');
+    expect(nombreGrupoSegun('Transición', 1, 'guion')).toBe('0-1');
+    expect(nombreGrupoSegun('Jardín', 1, 'grado')).toBe('J°1');
+    expect(nombreGrupoSegun('Aceleración', 1, 'grado')).toBeNull();
+  });
+  it('sugiere el siguiente nombre libre', async () => {
+    const { sugerirNombreGrupo } = await import('./utils');
+    expect(sugerirNombreGrupo('Sexto', ['6°1', '6°2'], 'grado')).toBe('6°3');
+    expect(sugerirNombreGrupo('Sexto', ['6°1', '6°3'], 'grado')).toBe('6°2');
+    expect(sugerirNombreGrupo('Octavo', ['801'], 'numero')).toBe('802');
+    expect(sugerirNombreGrupo('Grado especial', [], 'grado')).toBeNull();
+  });
+});

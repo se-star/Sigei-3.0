@@ -88,6 +88,8 @@ export const AJUSTES_VACIOS: Institucion = {
   logo_url: '',
   franjas: FRANJAS_DEFECTO,
   criterios_seguimiento: CRITERIOS_DEFECTO,
+  formato_grupo: 'grado',
+  jornadas: ['manana', 'tarde'],
 };
 
 /** Configuración de la institución en la que se está trabajando. */
@@ -96,6 +98,13 @@ export function useAjustes(): Institucion {
   const { data } = useTabla('instituciones');
   const fila = data?.find((i) => i.id === inst);
   return fila
-    ? { ...AJUSTES_VACIOS, ...fila, franjas: fila.franjas?.length ? fila.franjas : FRANJAS_DEFECTO, criterios_seguimiento: fila.criterios_seguimiento?.length ? fila.criterios_seguimiento : CRITERIOS_DEFECTO }
+    ? {
+        ...AJUSTES_VACIOS,
+        ...fila,
+        franjas: fila.franjas?.length ? fila.franjas : FRANJAS_DEFECTO,
+        criterios_seguimiento: fila.criterios_seguimiento?.length ? fila.criterios_seguimiento : CRITERIOS_DEFECTO,
+        formato_grupo: fila.formato_grupo ?? AJUSTES_VACIOS.formato_grupo,
+        jornadas: fila.jornadas?.length ? fila.jornadas : AJUSTES_VACIOS.jornadas,
+      }
     : { ...AJUSTES_VACIOS, id: inst };
 }

@@ -116,6 +116,8 @@ export function crearDatosDemo(cfg: ConfigDemo = DEMO_ALMENDROS) {
       logo_url: '',
       franjas: FRANJAS_DEFECTO,
       criterios_seguimiento: CRITERIOS_DEFECTO,
+      formato_grupo: 'grado',
+      jornadas: ['manana', 'tarde'],
     },
   ];
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, CalendarDays, ChevronRight, Clock3, ListTodo, Megaphone, Paperclip, Pin, Plus, UserRoundX } from 'lucide-react';
+import { Bell, CalendarDays, ChevronRight, Clock3, ListTodo, Megaphone, Paperclip, Pin, Plus, School, UserRoundX } from 'lucide-react';
+import { useMisGrupos } from './MiGrupo';
 import { Insignia, Tarjeta, Vacio } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 import { useAjustes, useTabla } from '@/hooks/useDatos';
@@ -75,9 +76,11 @@ export default function InicioDocente() {
     .slice(0, 4);
 
   const nombreClase = (c: BloqueHorario) => `${asg.get(c.asignatura_id)?.nombre ?? 'Clase'} · ${grs.get(c.grupo_id)?.nombre ?? ''}`;
+  const misGrupos = useMisGrupos();
   const accesos = [
     { to: '/novedades?nueva=1', texto: 'Solicitar permiso', icono: Plus },
     { to: '/horarios', texto: 'Mi horario', icono: Clock3 },
+    ...(misGrupos.length ? [{ to: '/mi-grupo', texto: `Mi grupo ${misGrupos[0].nombre}`, icono: School }] : []),
     { to: '/calendario', texto: 'Actividades', icono: CalendarDays },
     { to: '/comunicados', texto: 'Comunicados', icono: Megaphone },
   ];

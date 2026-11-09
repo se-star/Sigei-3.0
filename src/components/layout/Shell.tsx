@@ -30,9 +30,11 @@ import { modoDemo } from '@/lib/backend';
 import { cx } from '@/lib/utils';
 import { Logo, Wordmark } from './Logo';
 import { SelectorInstitucion } from './SelectorInstitucion';
+import { useMisGrupos } from '@/pages/MiGrupo';
 
 export function Shell() {
   const { perfil, ver, salir } = useAuth();
+  const esDirector = useMisGrupos().length > 0;
   const [colapsado, setColapsado] = useState(() => localStorage.getItem('sigei.menu') === 'mini');
   const [movil, setMovil] = useState(false);
   const [paleta, setPaleta] = useState(false);
@@ -65,10 +67,11 @@ export function Shell() {
   if (!perfil) return null;
 
   const esDocente = perfil.rol === 'docente';
+  const visible = (m: (typeof NAVEGACION)[number]['items'][number]) => (m.modulo === 'migrupo' ? esDirector : ver(m.modulo));
   const menu = (mini: boolean) => (
     <MenuDesplazable mini={mini}>
       {NAVEGACION.map((g) => {
-        const items = g.items.filter((i) => ver(i.modulo));
+        const items = g.items.filter(visible);
         if (!items.length) return null;
         return (
           <div key={g.grupo} className={cx('mt-4 first:mt-3', mini && 'mt-2 border-t border-line pt-2 first:border-0')}>

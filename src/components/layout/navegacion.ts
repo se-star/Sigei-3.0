@@ -11,6 +11,7 @@ import {
   ListTodo,
   Megaphone,
   Network,
+  School,
   Settings,
   UserRoundCheck,
   Users,
@@ -38,6 +39,7 @@ export const NAVEGACION: { grupo: string; items: ItemNav[] }[] = [
     grupo: 'Académico',
     items: [
       { ruta: '/docentes', etiqueta: 'Docentes', icono: UsersRound, modulo: 'docentes', descripcion: 'Directorio y hojas de vida' },
+      { ruta: '/mi-grupo', etiqueta: 'Mi grupo', icono: School, modulo: 'migrupo', descripcion: 'El grupo que dirijo' },
       { ruta: '/grupos', etiqueta: 'Grados y grupos', icono: Network, modulo: 'grupos', descripcion: 'Estructura académica' },
       { ruta: '/asignacion', etiqueta: 'Asignación académica', icono: BookOpenCheck, modulo: 'asignacion', descripcion: 'Carga docente por grupo' },
       { ruta: '/horarios', etiqueta: 'Horarios', icono: Clock3, modulo: 'horarios', descripcion: 'Horario semanal', docente: { etiqueta: 'Mi horario', descripcion: 'Mis clases de la semana' } },

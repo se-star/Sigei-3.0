@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { CornerDownLeft, Network, Search, UserRound, type LucideIcon } from 'lucide-react';
 import { TODOS_ITEMS, descripcionDe, etiquetaDe } from './navegacion';
+import { useMisGrupos } from '@/pages/MiGrupo';
 import { useAuth } from '@/hooks/useAuth';
 import { useTabla } from '@/hooks/useDatos';
 import { coincide, cx, nombreDocente, nombreGrupo } from '@/lib/utils';
@@ -22,6 +23,7 @@ export function Paleta({ abierta, onCerrar }: { abierta: boolean; onCerrar: () =
   const [sel, setSel] = useState(0);
   const nav = useNavigate();
   const { ver, perfil } = useAuth();
+  const esDirector = useMisGrupos().length > 0;
   const esDocente = perfil?.rol === 'docente';
   const { data: docentes = [] } = useTabla('docentes');
   const { data: grupos = [] } = useTabla('grupos');
@@ -36,7 +38,7 @@ export function Paleta({ abierta, onCerrar }: { abierta: boolean; onCerrar: () =
   }, [abierta]);
 
   const resultados = useMemo<Resultado[]>(() => {
-    const mods = TODOS_ITEMS.filter((i) => ver(i.modulo) && coincide(q, etiquetaDe(i, esDocente), descripcionDe(i, esDocente))).map((i) => ({
+    const mods = TODOS_ITEMS.filter((i) => (i.modulo === 'migrupo' ? esDirector : ver(i.modulo)) && coincide(q, etiquetaDe(i, esDocente), descripcionDe(i, esDocente))).map((i) => ({
       id: i.ruta,
       titulo: etiquetaDe(i, esDocente),
       sub: descripcionDe(i, esDocente),
@@ -68,7 +70,7 @@ export function Paleta({ abierta, onCerrar }: { abierta: boolean; onCerrar: () =
         seccion: 'Grupos',
       }));
     return [...mods, ...docs, ...grs];
-  }, [q, docentes, grupos, grados, ver, esDocente]);
+  }, [q, docentes, grupos, grados, ver, esDocente, esDirector]);
 
   useEffect(() => setSel(0), [q]);
 
