@@ -31,6 +31,9 @@ jobs:
           # Si no existen, el sitio se publica en modo demo.
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # Variable (no secreta) que activa el ingreso de docentes con código: ponga 1
+          # en Settings → Secrets and variables → Actions → Variables cuando esté listo.
+          VITE_ACCESO_DOCENTE: ${{ vars.VITE_ACCESO_DOCENTE }}
       - uses: actions/configure-pages@v5
         with:
           # Intenta activar Pages si aún no está activo (puede requerir activarlo a mano).

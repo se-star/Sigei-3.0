@@ -20,6 +20,7 @@ export default function Docentes() {
   const { data: asignaciones = [] } = useTabla('asignaciones');
   const { data: miembros = [] } = useMiembros();
   const conAcceso = new Set(miembros.filter((m) => m.activo && m.docente_id).map((m) => m.docente_id));
+  const porActivar = new Set(miembros.filter((m) => !m.activo && m.docente_id).map((m) => m.docente_id));
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('activo');
   const [area, setArea] = useState('');
@@ -135,16 +136,22 @@ export default function Docentes() {
       id: 'acceso',
       titulo: 'Acceso a SIGEI',
       ocultarMovil: true,
-      orden: (d) => (conAcceso.has(d.id) ? 0 : d.email ? 1 : 2),
+      orden: (d) => (porActivar.has(d.id) ? 0 : conAcceso.has(d.id) ? 1 : d.email ? 2 : 3),
       celda: (d) =>
         conAcceso.has(d.id) ? (
-          <Insignia tono="ok">Ya ingresó</Insignia>
+          <Insignia tono="ok">Con acceso</Insignia>
+        ) : porActivar.has(d.id) ? (
+          <span title="Creó su cuenta; actívela en Usuarios y roles.">
+            <Insignia tono="info">Por activar</Insignia>
+          </span>
         ) : d.email ? (
-          <span className="text-xs text-muted" title="Puede ingresar con su documento; recibirá el código en su correo.">
-            Puede ingresar
+          <span className="text-xs text-muted" title="Aún no ha creado su cuenta en SIGEI.">
+            Sin cuenta
           </span>
         ) : (
-          <Insignia tono="warn">Falta correo</Insignia>
+          <span title="Sin correo no puede quedar vinculado a su cuenta.">
+            <Insignia tono="warn">Falta correo</Insignia>
+          </span>
         ),
     },
     {
