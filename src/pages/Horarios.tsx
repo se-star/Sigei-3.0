@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Clock3, Printer, Trash2 } from 'lucide-react';
+import { AlertTriangle, CalendarPlus, CheckCircle2, Clock3, Printer, Trash2, UserRoundX } from 'lucide-react';
 import { Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Segmentos, Selector, Tarjeta, Vacio } from '@/components/ui';
 import { HorarioSemanal } from '@/components/HorarioSemanal';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,11 +9,17 @@ import { useConfirmar } from '@/hooks/useConfirmar';
 import { useToast } from '@/hooks/useToast';
 import { DIAS } from '@/lib/catalogos';
 import type { BloqueHorario, Dia, Nuevo } from '@/lib/types';
-import { choquesDe, cx, duracionHoras, nombreDocente, nombreGrupo, porId } from '@/lib/utils';
+import { aISO, choquesDe, cx, descargarArchivo, duracionHoras, nombreDocente, nombreGrupo, porId } from '@/lib/utils';
 
 type Modo = 'grupo' | 'docente';
 
 export default function Horarios() {
+  const { perfil } = useAuth();
+  // El docente ve solo su propio horario, en una vista más sencilla.
+  return perfil?.rol === 'docente' ? <MiHorario /> : <HorariosGestion />;
+}
+
+function HorariosGestion() {
   const { editar, perfil } = useAuth();
   const puede = editar('horarios');
   const ajustes = useAjustes();
@@ -412,5 +418,119 @@ function FormBloque({
         )}
       </div>
     </Modal>
+  );
+}
+
+/** Horario personal del docente, con exportación a su calendario. */
+function MiHorario() {
+  const { perfil } = useAuth();
+  const ajustes = useAjustes();
+  const { data: horarios = [], isLoading } = useTabla('horarios');
+  const { data: grupos = [] } = useTabla('grupos');
+  const { data: grados = [] } = useTabla('grados');
+  const { data: asignaturas = [] } = useTabla('asignaturas');
+  const { data: areas = [] } = useTabla('areas');
+  const asg = porId(asignaturas);
+  const ars = porId(areas);
+  const grs = porId(grupos);
+  const mios = horarios.filter((h) => h.docente_id && h.docente_id === perfil?.docente_id);
+  const horas = mios.reduce((s, b) => s + duracionHoras(b.hora_inicio, b.hora_fin), 0);
+  const porGrupo = [...new Set(mios.map((b) => b.grupo_id))].map((g) => ({
+    grupo: grs.get(g),
+    clases: mios.filter((b) => b.grupo_id === g).length,
+  }));
+
+  /** Archivo .ics con cada clase repetida semanalmente hasta el final del año lectivo. */
+  const exportar = () => {
+    const hoy = new Date();
+    const fin = `${ajustes.anio_lectivo}1130T235959`;
+    const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SIGEI 3.0//ES', 'X-WR-CALNAME:Mi horario de clases'];
+    for (const b of mios) {
+      const d = new Date(hoy);
+      d.setDate(d.getDate() + ((b.dia - d.getDay() + 7) % 7));
+      const f = aISO(d).replace(/-/g, '');
+      const t = (h: string) => h.replace(':', '') + '00';
+      lineas.push(
+        'BEGIN:VEVENT',
+        `UID:${b.id}@sigei`,
+        `SUMMARY:${asg.get(b.asignatura_id)?.nombre ?? 'Clase'} · ${grs.get(b.grupo_id)?.nombre ?? ''}`,
+        `DTSTART:${f}T${t(b.hora_inicio)}`,
+        `DTEND:${f}T${t(b.hora_fin)}`,
+        `RRULE:FREQ=WEEKLY;UNTIL=${fin}`,
+        ...(b.aula ? [`LOCATION:${b.aula}`] : []),
+        'END:VEVENT',
+      );
+    }
+    lineas.push('END:VCALENDAR');
+    descargarArchivo('mi-horario.ics', lineas.join('\r\n'), 'text/calendar;charset=utf-8');
+  };
+
+  if (!perfil?.docente_id)
+    return (
+      <>
+        <Encabezado titulo="Mi horario" />
+        <div className="card">
+          <Vacio
+            icono={<UserRoundX className="size-6" />}
+            titulo="Su cuenta no está vinculada a un registro docente"
+            texto="Pida a la coordinación que revise que su correo en el directorio de docentes sea el mismo con el que ingresa."
+          />
+        </div>
+      </>
+    );
+
+  return (
+    <>
+      <Encabezado
+        titulo="Mi horario"
+        descripcion={`${mios.length} clases a la semana · ${Math.round(horas * 10) / 10} horas`}
+        acciones={
+          <>
+            <Boton variante="secundario" icono={<CalendarPlus className="size-4" />} onClick={exportar} disabled={!mios.length} title="Importe el archivo en Google Calendar, Outlook o el calendario de su celular">
+              Agregar a mi calendario
+            </Boton>
+            <Boton variante="secundario" icono={<Printer className="size-4" />} onClick={() => window.print()}>
+              Imprimir
+            </Boton>
+          </>
+        }
+      />
+      {isLoading ? (
+        <Cargando />
+      ) : !mios.length ? (
+        <div className="card">
+          <Vacio titulo="Aún no tiene clases en el horario" texto="Cuando la coordinación programe sus clases, aparecerán aquí." />
+        </div>
+      ) : (
+        <div className="grid gap-6 xl:grid-cols-[1fr_280px]">
+          <Tarjeta titulo="Semana">
+            <HorarioSemanal
+              bloques={mios}
+              franjas={ajustes.franjas}
+              color={(b) => ars.get(asg.get(b.asignatura_id)?.area_id ?? '')?.color}
+              render={(b) => (
+                <>
+                  <span className="truncate text-[13px] leading-tight font-semibold">{asg.get(b.asignatura_id)?.nombre ?? '—'}</span>
+                  <span className="truncate text-xs text-muted">
+                    {grs.get(b.grupo_id)?.nombre}
+                    {b.aula && ` · ${b.aula}`}
+                  </span>
+                </>
+              )}
+            />
+          </Tarjeta>
+          <Tarjeta titulo="Mis grupos" className="no-print">
+            <ul className="flex flex-col gap-2">
+              {porGrupo.map(({ grupo, clases }) => (
+                <li key={grupo?.id ?? clases} className="flex items-center justify-between rounded-[20px] bg-surface-2 px-4 py-2.5">
+                  <span className="font-medium">{nombreGrupo(grupo, grados)}</span>
+                  <span className="text-sm text-muted tabular-nums">{clases} clases</span>
+                </li>
+              ))}
+            </ul>
+          </Tarjeta>
+        </div>
+      )}
+    </>
   );
 }

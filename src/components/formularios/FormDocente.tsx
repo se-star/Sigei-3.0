@@ -5,6 +5,7 @@ import { useMutar, useTabla } from '@/hooks/useDatos';
 import { useToast } from '@/hooks/useToast';
 import { ESTADOS_DOCENTE, VINCULACIONES } from '@/lib/catalogos';
 import type { Docente, Nuevo } from '@/lib/types';
+import { normalizarDocumento } from '@/lib/data/provider';
 
 const VACIO: Nuevo<Docente> = {
   documento: '',
@@ -52,7 +53,7 @@ export function FormDocente({
       documento: (v) =>
         !v.documento.trim()
           ? 'Ingrese el documento.'
-          : docentes.some((d) => d.documento === v.documento.trim() && d.id !== docente?.id) && 'Ya existe un docente con este documento.',
+          : docentes.some((d) => d.documento === normalizarDocumento(v.documento) && d.id !== docente?.id) && 'Ya existe un docente con este documento.',
       nombres: (v) => !v.nombres.trim() && 'Ingrese los nombres.',
       apellidos: (v) => !v.apellidos.trim() && 'Ingrese los apellidos.',
       email: (v) => !!v.email && !/^\S+@\S+\.\S+$/.test(v.email) && 'Correo no válido.',
@@ -61,7 +62,7 @@ export function FormDocente({
     if (!ok) return;
     const datos = {
       ...f.valores,
-      documento: f.valores.documento.trim(),
+      documento: normalizarDocumento(f.valores.documento),
       nombres: f.valores.nombres.trim(),
       apellidos: f.valores.apellidos.trim(),
       email: f.valores.email.trim().toLowerCase(),
@@ -137,7 +138,12 @@ export function FormDocente({
           <Campo etiqueta="Teléfono">
             {(id) => <Entrada id={id} {...campo('telefono')} type="tel" />}
           </Campo>
-          <Campo etiqueta="Correo electrónico" error={err.email} className="sm:col-span-2">
+          <Campo
+            etiqueta="Correo electrónico"
+            error={err.email}
+            ayuda="Necesario para que el docente ingrese a SIGEI: allí recibe su código de acceso. Si trabaja en varias instituciones, use el mismo correo en todas."
+            className="sm:col-span-2"
+          >
             {(id) => <Entrada id={id} {...campo('email')} type="email" />}
           </Campo>
         </fieldset>

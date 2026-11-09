@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { CornerDownLeft, Network, Search, UserRound, type LucideIcon } from 'lucide-react';
-import { TODOS_ITEMS } from './navegacion';
+import { TODOS_ITEMS, descripcionDe, etiquetaDe } from './navegacion';
 import { useAuth } from '@/hooks/useAuth';
 import { useTabla } from '@/hooks/useDatos';
 import { coincide, cx, nombreDocente, nombreGrupo } from '@/lib/utils';
@@ -21,7 +21,8 @@ export function Paleta({ abierta, onCerrar }: { abierta: boolean; onCerrar: () =
   const [q, setQ] = useState('');
   const [sel, setSel] = useState(0);
   const nav = useNavigate();
-  const { ver } = useAuth();
+  const { ver, perfil } = useAuth();
+  const esDocente = perfil?.rol === 'docente';
   const { data: docentes = [] } = useTabla('docentes');
   const { data: grupos = [] } = useTabla('grupos');
   const { data: grados = [] } = useTabla('grados');
@@ -35,16 +36,16 @@ export function Paleta({ abierta, onCerrar }: { abierta: boolean; onCerrar: () =
   }, [abierta]);
 
   const resultados = useMemo<Resultado[]>(() => {
-    const mods = TODOS_ITEMS.filter((i) => ver(i.modulo) && coincide(q, i.etiqueta, i.descripcion)).map((i) => ({
+    const mods = TODOS_ITEMS.filter((i) => ver(i.modulo) && coincide(q, etiquetaDe(i, esDocente), descripcionDe(i, esDocente))).map((i) => ({
       id: i.ruta,
-      titulo: i.etiqueta,
-      sub: i.descripcion,
+      titulo: etiquetaDe(i, esDocente),
+      sub: descripcionDe(i, esDocente),
       ruta: i.ruta,
       icono: i.icono,
       seccion: 'Ir a',
     }));
     if (!q.trim()) return mods;
-    const docs = docentes
+    const docs = (ver('docentes') ? docentes : [])
       .filter((d) => coincide(q, d.nombres, d.apellidos, d.documento, d.email))
       .slice(0, 6)
       .map((d) => ({
@@ -55,7 +56,7 @@ export function Paleta({ abierta, onCerrar }: { abierta: boolean; onCerrar: () =
         icono: UserRound,
         seccion: 'Docentes',
       }));
-    const grs = grupos
+    const grs = (ver('grupos') ? grupos : [])
       .filter((g) => coincide(q, nombreGrupo(g, grados)))
       .slice(0, 5)
       .map((g) => ({
@@ -67,7 +68,7 @@ export function Paleta({ abierta, onCerrar }: { abierta: boolean; onCerrar: () =
         seccion: 'Grupos',
       }));
     return [...mods, ...docs, ...grs];
-  }, [q, docentes, grupos, grados, ver]);
+  }, [q, docentes, grupos, grados, ver, esDocente]);
 
   useEffect(() => setSel(0), [q]);
 

@@ -6,7 +6,7 @@ import { Buscador } from '@/components/ui/Buscador';
 import { Tabla, type Columna } from '@/components/ui/Tabla';
 import { FormDocente } from '@/components/formularios/FormDocente';
 import { useAuth } from '@/hooks/useAuth';
-import { useTabla } from '@/hooks/useDatos';
+import { useMiembros, useTabla } from '@/hooks/useDatos';
 import { ESTADOS_DOCENTE, etiqueta, tono, VINCULACIONES } from '@/lib/catalogos';
 import type { Docente } from '@/lib/types';
 import { coincide, cx, descargarCSV, nombreDocente, porId } from '@/lib/utils';
@@ -18,6 +18,8 @@ export default function Docentes() {
   const { data: areas = [] } = useTabla('areas');
   const { data: sedes = [] } = useTabla('sedes');
   const { data: asignaciones = [] } = useTabla('asignaciones');
+  const { data: miembros = [] } = useMiembros();
+  const conAcceso = new Set(miembros.filter((m) => m.activo && m.docente_id).map((m) => m.docente_id));
   const [q, setQ] = useState('');
   const [estado, setEstado] = useState('activo');
   const [area, setArea] = useState('');
@@ -128,6 +130,22 @@ export default function Docentes() {
           </div>
         );
       },
+    },
+    {
+      id: 'acceso',
+      titulo: 'Acceso a SIGEI',
+      ocultarMovil: true,
+      orden: (d) => (conAcceso.has(d.id) ? 0 : d.email ? 1 : 2),
+      celda: (d) =>
+        conAcceso.has(d.id) ? (
+          <Insignia tono="ok">Ya ingresó</Insignia>
+        ) : d.email ? (
+          <span className="text-xs text-muted" title="Puede ingresar con su documento; recibirá el código en su correo.">
+            Puede ingresar
+          </span>
+        ) : (
+          <Insignia tono="warn">Falta correo</Insignia>
+        ),
     },
     {
       id: 'estado',

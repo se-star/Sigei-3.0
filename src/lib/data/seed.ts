@@ -170,7 +170,8 @@ export function crearDatosDemo(cfg: ConfigDemo = DEMO_ALMENDROS) {
     documento: String(43000000 + i * 137911),
     nombres,
     apellidos,
-    email: `${nombres.split(' ')[0].toLowerCase()}.${apellidos.split(' ')[0].toLowerCase()}@${cfg.dominio}`
+    // Laura trabaja en los dos colegios con el mismo correo (así entra a ambos con su documento).
+    email: (nombres === 'Laura Marcela' ? 'laura.restrepo@docentes.edu.co' : `${nombres.split(' ')[0].toLowerCase()}.${apellidos.split(' ')[0].toLowerCase()}@${cfg.dominio}`)
       .normalize('NFD')
       .replace(/[̀-ͯ]/g, ''),
     telefono: `300 ${String(1000000 + i * 54321).slice(0, 3)} ${String(1000 + i * 77).slice(0, 4)}`,

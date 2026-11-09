@@ -3,13 +3,15 @@ import { useSearchParams } from 'react-router-dom';
 import { Bell, Check, Download, Pencil, Plus, Trash2, UserCheck, X, CalendarRange, Ban } from 'lucide-react';
 import { AreaTexto, Avatar, Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Panel, Segmentos, Selector, Vacio } from '@/components/ui';
 import { Buscador } from '@/components/ui/Buscador';
+import { ListaSoportes, SelectorSoportes } from '@/components/Soportes';
+import { backend } from '@/lib/backend';
 import { useAuth } from '@/hooks/useAuth';
 import { useMutar, useTabla } from '@/hooks/useDatos';
 import { useConfirmar } from '@/hooks/useConfirmar';
 import { useToast } from '@/hooks/useToast';
 import { DIAS, ESTADOS_NOVEDAD, etiqueta, tono, TIPOS_NOVEDAD } from '@/lib/catalogos';
 import { puedeAprobar } from '@/lib/permisos';
-import type { BloqueHorario, EstadoNovedad, ID, Novedad, Nuevo } from '@/lib/types';
+import type { BloqueHorario, EstadoNovedad, ID, Novedad, Nuevo, Soporte } from '@/lib/types';
 import { coincide, desdeISO, descargarCSV, diasEntre, fechaCorta, hoyISO, nombreDocente, porId, seSolapan, sumarDias } from '@/lib/utils';
 
 type Filtro = EstadoNovedad | 'todas';
@@ -85,6 +87,7 @@ export default function Novedades() {
     if (!(await confirmar({ titulo: 'Eliminar novedad', texto: 'Se eliminará el registro de forma permanente.', confirmar: 'Eliminar', peligro: true }))) return;
     try {
       await eliminar.mutateAsync(n.id);
+      backend.datos.borrarSoportes((n.soportes ?? []).map((x) => x.ruta)).catch(() => undefined);
       toast.ok('Novedad eliminada.');
     } catch (e) {
       toast.error(e);
@@ -114,7 +117,7 @@ export default function Novedades() {
   return (
     <>
       <Encabezado
-        titulo="Novedades y permisos"
+        titulo={aprueba ? 'Novedades y permisos' : 'Mis permisos'}
         descripcion={aprueba ? 'Solicitudes de permiso, incapacidades y licencias del personal, con su reemplazo.' : 'Radique sus solicitudes y consulte su estado.'}
         acciones={
           <>
@@ -208,6 +211,7 @@ export default function Novedades() {
                         {afect > 0 && ` · ${afect} ${afect === 1 ? 'clase afectada' : 'clases afectadas'}`}
                       </p>
                       {n.motivo && <p className="mt-2 text-sm text-muted">{n.motivo}</p>}
+                      <ListaSoportes soportes={n.soportes} className="mt-2" />
                       <div className="mt-3 flex flex-wrap gap-2 text-xs">
                         {r ? (
                           <Insignia tono="ok">
@@ -320,6 +324,13 @@ function Revision({ datos, onCerrar }: { datos: { n: Novedad; decision: 'aprobad
       }
     >
       <div className="flex flex-col gap-4">
+        {!!n.soportes?.length && (
+          <div>
+            <p className="mb-1.5 text-[13px] font-medium text-ink-2">Soportes adjuntos</p>
+            <ListaSoportes soportes={n.soportes} />
+          </div>
+        )}
+        {n.motivo && <p className="rounded-[20px] bg-surface-2 p-3 text-sm text-ink-2">{n.motivo}</p>}
         {aprobar && <SelectorReemplazo novedad={n} valor={reemplazo} onCambio={setReemplazo} docentes={docentes} horarios={horarios} novedades={novedades} />}
         <Campo etiqueta={aprobar ? 'Observación (opcional)' : 'Motivo del rechazo'}>
           {(id) => <AreaTexto id={id} value={obs} onChange={(e) => setObs(e.target.value)} rows={3} />}
@@ -417,12 +428,17 @@ function FormNovedad({ abierto, novedad, docente_id, onCerrar }: { abierto: bool
   const [v, setV] = useState(vacio);
   const set = <K extends keyof typeof v>(k: K, val: (typeof v)[K]) => setV((x) => ({ ...x, [k]: val }));
   const [porHoras, setPorHoras] = useState(false);
+  const [guardados, setGuardados] = useState<Soporte[]>([]);
+  const [nuevos, setNuevos] = useState<File[]>([]);
+  const [subiendo, setSubiendo] = useState(false);
 
   useEffect(() => {
     if (!abierto) return;
     const base = novedad ?? { ...vacio, docente_id: aprueba ? (docente_id ?? '') : (perfil?.docente_id ?? ''), creado_por: perfil?.id ?? null };
     setV(base);
     setPorHoras(!!base.horas);
+    setGuardados(novedad?.soportes ?? []);
+    setNuevos([]);
   }, [abierto, novedad, docente_id]);
 
   const guardar = async () => {
@@ -437,13 +453,24 @@ function FormNovedad({ abierto, novedad, docente_id, onCerrar }: { abierto: bool
     if (solapa) return toast.error('Ya existe una novedad para este docente que se cruza con esas fechas.');
     const datos = { ...v, fecha_fin: fin, horas: porHoras ? Number(v.horas) : 0, motivo: v.motivo.trim(), reemplazo_id: v.reemplazo_id || null };
     if (!novedad && datos.estado === 'aprobada') Object.assign(datos, { revisado_por: perfil?.nombre ?? null, revisado_en: new Date().toISOString() });
+    setSubiendo(true);
+    const subidos: Soporte[] = [];
     try {
-      if (novedad) await editar.mutateAsync({ id: novedad.id, cambios: datos });
-      else await crear.mutateAsync(datos);
+      // Primero se suben los archivos nuevos; si algo falla, no se guarda la solicitud a medias.
+      for (const f of nuevos) subidos.push(await backend.datos.subirSoporte(f, v.docente_id));
+      const conSoportes = { ...datos, soportes: [...guardados, ...subidos] };
+      if (novedad) await editar.mutateAsync({ id: novedad.id, cambios: conSoportes });
+      else await crear.mutateAsync(conSoportes);
+      // Los soportes que se quitaron se borran del almacenamiento.
+      const quitados = (novedad?.soportes ?? []).filter((x) => !guardados.some((g) => g.ruta === x.ruta));
+      if (quitados.length) backend.datos.borrarSoportes(quitados.map((x) => x.ruta)).catch(() => undefined);
       toast.ok(novedad ? 'Novedad actualizada.' : aprueba ? 'Novedad registrada.' : 'Solicitud enviada. Le avisaremos cuando sea revisada.');
       onCerrar();
     } catch (e) {
+      if (subidos.length) backend.datos.borrarSoportes(subidos.map((x) => x.ruta)).catch(() => undefined);
       toast.error(e);
+    } finally {
+      setSubiendo(false);
     }
   };
 
@@ -458,7 +485,7 @@ function FormNovedad({ abierto, novedad, docente_id, onCerrar }: { abierto: bool
           <Boton variante="secundario" onClick={onCerrar}>
             Cancelar
           </Boton>
-          <Boton onClick={guardar} cargando={crear.isPending || editar.isPending}>
+          <Boton onClick={guardar} cargando={subiendo || crear.isPending || editar.isPending}>
             {novedad ? 'Guardar cambios' : aprueba ? 'Registrar' : 'Enviar solicitud'}
           </Boton>
         </>
@@ -513,8 +540,14 @@ function FormNovedad({ abierto, novedad, docente_id, onCerrar }: { abierto: bool
           </Campo>
         )}
         <Campo etiqueta="Motivo o descripción">
-          {(id) => <AreaTexto id={id} value={v.motivo} onChange={(e) => set('motivo', e.target.value)} rows={3} placeholder="Describa brevemente la situación y los soportes que adjuntará." />}
+          {(id) => <AreaTexto id={id} value={v.motivo} onChange={(e) => set('motivo', e.target.value)} rows={3} placeholder="Describa brevemente la situación." />}
         </Campo>
+        <SelectorSoportes
+          guardados={guardados}
+          onQuitarGuardado={(x) => setGuardados(guardados.filter((g) => g.ruta !== x.ruta))}
+          nuevos={nuevos}
+          onNuevos={setNuevos}
+        />
         {aprueba && v.docente_id && (
           <SelectorReemplazo
             novedad={{ ...v, id: novedad?.id ?? '' }}

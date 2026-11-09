@@ -25,6 +25,8 @@ export interface ItemNav {
   icono: LucideIcon;
   modulo: Modulo;
   descripcion: string;
+  /** Nombre y descripción que ve un docente (su espacio personal). */
+  docente?: { etiqueta: string; descripcion: string };
 }
 
 export const NAVEGACION: { grupo: string; items: ItemNav[] }[] = [
@@ -38,20 +40,20 @@ export const NAVEGACION: { grupo: string; items: ItemNav[] }[] = [
       { ruta: '/docentes', etiqueta: 'Docentes', icono: UsersRound, modulo: 'docentes', descripcion: 'Directorio y hojas de vida' },
       { ruta: '/grupos', etiqueta: 'Grados y grupos', icono: Network, modulo: 'grupos', descripcion: 'Estructura académica' },
       { ruta: '/asignacion', etiqueta: 'Asignación académica', icono: BookOpenCheck, modulo: 'asignacion', descripcion: 'Carga docente por grupo' },
-      { ruta: '/horarios', etiqueta: 'Horarios', icono: Clock3, modulo: 'horarios', descripcion: 'Horario semanal' },
+      { ruta: '/horarios', etiqueta: 'Horarios', icono: Clock3, modulo: 'horarios', descripcion: 'Horario semanal', docente: { etiqueta: 'Mi horario', descripcion: 'Mis clases de la semana' } },
     ],
   },
   {
     grupo: 'Personal',
     items: [
-      { ruta: '/novedades', etiqueta: 'Novedades y permisos', icono: Bell, modulo: 'novedades', descripcion: 'Ausencias y reemplazos' },
-      { ruta: '/seguimiento', etiqueta: 'Seguimiento pedagógico', icono: UserRoundCheck, modulo: 'seguimiento', descripcion: 'Acompañamiento de aula' },
+      { ruta: '/novedades', etiqueta: 'Novedades y permisos', icono: Bell, modulo: 'novedades', descripcion: 'Ausencias y reemplazos', docente: { etiqueta: 'Mis permisos', descripcion: 'Solicitudes y su estado' } },
+      { ruta: '/seguimiento', etiqueta: 'Seguimiento pedagógico', icono: UserRoundCheck, modulo: 'seguimiento', descripcion: 'Acompañamiento de aula', docente: { etiqueta: 'Mi seguimiento', descripcion: 'Observaciones de mis clases' } },
     ],
   },
   {
     grupo: 'Comunidad',
     items: [
-      { ruta: '/calendario', etiqueta: 'Calendario', icono: CalendarDays, modulo: 'calendario', descripcion: 'Eventos y cronograma' },
+      { ruta: '/calendario', etiqueta: 'Calendario', icono: CalendarDays, modulo: 'calendario', descripcion: 'Eventos y cronograma', docente: { etiqueta: 'Actividades', descripcion: 'Actividades académicas del mes' } },
       { ruta: '/comunicados', etiqueta: 'Comunicados', icono: Megaphone, modulo: 'comunicados', descripcion: 'Avisos institucionales' },
       { ruta: '/tareas', etiqueta: 'Tareas', icono: ListTodo, modulo: 'tareas', descripcion: 'Pendientes del equipo' },
     ],
@@ -73,3 +75,11 @@ export const NAVEGACION: { grupo: string; items: ItemNav[] }[] = [
 ];
 
 export const TODOS_ITEMS = NAVEGACION.flatMap((g) => g.items);
+
+/** Nombre de un elemento del menú según el rol (los docentes ven su espacio personal). */
+export function etiquetaDe(i: ItemNav, esDocente: boolean): string {
+  return esDocente && i.docente ? i.docente.etiqueta : i.etiqueta;
+}
+export function descripcionDe(i: ItemNav, esDocente: boolean): string {
+  return esDocente && i.docente ? i.docente.descripcion : i.descripcion;
+}

@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { InstitucionPublica } from '@/lib/data/provider';
 import { ArrowRight, Bell, Check, Clock3, GraduationCap, Landmark, ShieldCheck, UserRound, Users } from 'lucide-react';
-import { Boton, Campo, Entrada, Selector } from '@/components/ui';
+import { Boton, Campo, Entrada, Segmentos, Selector } from '@/components/ui';
+import { IngresoDocente } from '@/components/IngresoDocente';
 import { Logo, Wordmark } from '@/components/layout/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
@@ -31,7 +32,9 @@ export default function Login() {
             Gestión educativa institucional: docentes, grupos, horarios y novedades en un solo lugar.
           </p>
         </div>
-        <div className="anim-rise card mt-10 w-full max-w-md p-6 sm:p-8">{modoDemo ? <AccesoDemo /> : <AccesoNube />}</div>
+        <div className="anim-rise card mt-10 w-full max-w-md p-6 sm:p-8">
+          <Acceso />
+        </div>
         <p className="mt-10 text-[13px] text-muted">
           © {new Date().getFullYear()} SIGEI · Versión 3.0
           {servidorDatos && <span className="block text-center text-xs">Servidor de datos: {servidorDatos}</span>}
@@ -91,6 +94,51 @@ function Constelacion() {
         </span>
       </div>
     </div>
+  );
+}
+
+type Pestana = 'docente' | 'directivos';
+
+/** Dos formas de entrar: docentes con documento y código; directivos con correo y contraseña. */
+function Acceso() {
+  const [pestana, setPestana] = useState<Pestana>(() => {
+    try {
+      return (localStorage.getItem('sigei.ingreso') as Pestana) || 'docente';
+    } catch {
+      return 'docente';
+    }
+  });
+  const cambiar = (p: Pestana) => {
+    setPestana(p);
+    try {
+      localStorage.setItem('sigei.ingreso', p);
+    } catch {
+      /* sin almacenamiento */
+    }
+  };
+  return (
+    <>
+      <Segmentos<Pestana>
+        className="mb-6 w-full [&>button]:flex-1 [&>button]:justify-center"
+        valor={pestana}
+        onCambio={cambiar}
+        opciones={[
+          { valor: 'docente', etiqueta: 'Soy docente' },
+          { valor: 'directivos', etiqueta: modoDemo ? 'Probar por rol' : 'Directivos' },
+        ]}
+      />
+      {pestana === 'docente' ? (
+        <>
+          <h2 className="text-[26px] font-semibold">Ingreso de docentes</h2>
+          <p className="mt-1.5 mb-6 text-[15px] text-muted">Entre con su número de documento. Consulte su horario, solicite permisos y vea las actividades del mes.</p>
+          <IngresoDocente />
+        </>
+      ) : modoDemo ? (
+        <AccesoDemo />
+      ) : (
+        <AccesoNube />
+      )}
+    </>
   );
 }
 
@@ -185,12 +233,12 @@ function AccesoNube() {
     }
   };
 
-  const titulos = { entrar: 'Bienvenido de nuevo', registro: 'Solicitar acceso', recuperar: 'Recuperar contraseña' };
+  const titulos = { entrar: 'Ingreso de directivos', registro: 'Solicitar acceso', recuperar: 'Recuperar contraseña' };
   return (
     <>
       <h2 className="text-[26px] font-semibold">{titulos[modo]}</h2>
       <p className="mt-1.5 text-[15px] text-muted">
-        {modo === 'entrar' && 'Ingrese con su correo institucional.'}
+        {modo === 'entrar' && 'Rectoría, coordinación y administración: ingrese con su correo y contraseña.'}
         {modo === 'registro' && 'Cree su cuenta. La administración debe aprobarla antes de que pueda ingresar.'}
         {modo === 'recuperar' && 'Le enviaremos un enlace para crear una contraseña nueva.'}
       </p>
