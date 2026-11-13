@@ -102,11 +102,26 @@ Ejecute también `supabase/migrations/0003_acceso_docentes.sql` (vinculación y 
 1. Las migraciones anteriores ya deben estar ejecutadas.
 2. **Función del servidor**: en **Edge Functions → Deploy a new function → Via Editor**, nómbrela `acceso-docente`, pegue el contenido de `supabase/functions/acceso-docente/index.ts`, despliéguela y, en su configuración, **desactive "Verify JWT"** (la usan personas que aún no han ingresado).
 3. **Correo propio** (obligatorio para que los códigos lleguen a todos los docentes): en **Authentication → Emails → SMTP Settings** configure un servicio como Gmail (con contraseña de aplicación) o Resend.
-4. **Plantillas**: en **Authentication → Emails**, en *Magic Link* y en *Confirm signup*, incluya el código con `{{ .Token }}`. Por ejemplo: «Su código para ingresar a SIGEI es {{ .Token }}. Vence en una hora.»
+4. **Plantillas**: en **Authentication → Emails**, pegue las plantillas con la marca de `supabase/plantillas/`: `magic-link.html` en *Magic Link* (asunto «Su código para ingresar a SIGEI TIC»), `confirm-signup.html` en *Confirm signup* («Bienvenido a SIGEI TIC») y `reset-password.html` en *Reset Password* («Restablecer su contraseña de SIGEI TIC»).
 5. En GitHub, **Settings → Secrets and variables → Actions → Variables**, cree la variable `VITE_ACCESO_DOCENTE` con el valor `1` y vuelva a publicar. Aparecerá la pestaña *Soy docente* en el ingreso.
 6. Registre a cada docente en *Docentes* con su documento y su correo.
 
 > En **Authentication → URL Configuration** ponga como *Site URL* la dirección publicada (por ejemplo `https://se-star.github.io/Sigei-3.0/`) y agréguela también en *Redirect URLs*, junto con `http://localhost:5173/` si va a trabajar en local. Así funcionan los correos de confirmación y de recuperación de contraseña. Quien llega desde el enlace de recuperación ve una pantalla para crear su contraseña nueva; con sesión iniciada también se puede cambiar desde *Mi perfil*.
+
+## Marca
+
+Los archivos oficiales del logo de SIGEI TIC están en `public/marca/` y se publican en `https://se-star.github.io/Sigei-3.0/marca/`. Las letras están convertidas en trazos, así que los SVG se ven igual en cualquier equipo.
+
+| Archivo | Uso |
+|---|---|
+| `logo-vertical*.svg` | Versión principal: portadas, ingreso, afiches y certificados |
+| `logo-horizontal*.svg` | Menú, encabezados de documentos y correos |
+| `logo-horizontal-frase*.svg` | Horizontal con «Gestión educativa institucional» |
+| `simbolo*.svg` | El hexágono solo |
+| `icono-app.svg`, `icono-app-maskable.svg` | Ícono de la app sobre azul marino |
+| `png/` | Las mismas versiones en PNG con fondo transparente |
+
+Cada versión viene en cuatro tonos: a color para fondos claros (sin sufijo), `-oscuro` para fondos azul marino, y `-blanco` y `-grafito` a una sola tinta. Los íconos de la app están en `public/icons/`, el favicon en `public/favicon.svg` y `public/favicon.ico`, y la imagen para compartir el enlace en `public/og-image.png`.
 
 ## Publicar en GitHub Pages
 
