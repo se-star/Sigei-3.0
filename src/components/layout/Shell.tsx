@@ -106,10 +106,10 @@ export function Shell() {
 
   const marca = (mini: boolean) => (
     <NavLink to="/" className={cx('flex items-center gap-2.5 pt-4 pb-3', mini ? 'justify-center' : 'px-5')} aria-label="Ir al inicio">
-      <Logo className="size-9 shrink-0" />
+      <Logo className="size-10" />
       {!mini && (
         <span className="min-w-0">
-          <Wordmark className="block text-[24px] leading-none" />
+          <Wordmark className="text-[25px]" />
           <span className="mt-1 block truncate text-xs text-muted">Gestión educativa</span>
         </span>
       )}

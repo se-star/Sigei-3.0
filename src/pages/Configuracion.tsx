@@ -405,7 +405,7 @@ function Respaldo() {
       datos = JSON.parse(await f.text());
       if (datos.sigei !== '3.0') throw new Error();
     } catch {
-      return toast.error('El archivo no es un respaldo válido de SIGEI 3.0.');
+      return toast.error('El archivo no es un respaldo válido de SIGEI TIC.');
     }
     const resumen = TABLAS_RESPALDO.filter((t) => Array.isArray(datos[t])).map((t) => `${(datos[t] as unknown[]).length} ${t}`);
     const ok = await confirmar({
@@ -444,7 +444,7 @@ function Respaldo() {
         </Boton>
       </Tarjeta>
       <Tarjeta titulo="Restaurar respaldo" icono={<Upload className="size-4" />}>
-        <p className="mb-4 text-sm text-muted">Carga un archivo de SIGEI 3.0 en esta institución, como registros nuevos. Sirve también para copiar datos de otra institución. Los usuarios y el registro de actividad no se incluyen.</p>
+        <p className="mb-4 text-sm text-muted">Carga un archivo de SIGEI en esta institución, como registros nuevos. Sirve también para copiar datos de otra institución. Los usuarios y el registro de actividad no se incluyen.</p>
         <input ref={archivo} type="file" accept="application/json,.json" hidden onChange={(e) => (e.target.files?.[0] && importar(e.target.files[0]), (e.target.value = ''))} />
         <Boton variante="secundario" icono={<Upload className="size-4" />} onClick={() => archivo.current?.click()} cargando={trabajando}>
           Elegir archivo

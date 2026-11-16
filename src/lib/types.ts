@@ -1,4 +1,4 @@
-/** Modelo de datos de SIGEI 3.0. Refleja las tablas de supabase/migrations. */
+/** Modelo de datos de SIGEI TIC. Refleja las tablas de supabase/migrations. */
 
 export type ID = string;
 

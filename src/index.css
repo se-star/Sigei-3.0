@@ -1,40 +1,47 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/inter';
+@import '@fontsource/outfit/500.css';
+@import '@fontsource/outfit/600.css';
+@import '@fontsource/outfit/700.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Tokens de diseño de SIGEI 3.0 — basados en DESIGN.md.
- * Lienzo gris niebla, superficies blancas que flotan sobre sombras suaves,
- * controles en píldora, tipografía con tracking negativo y un único acento
- * violeta reservado a la marca y a la búsqueda. El color restante proviene
- * de los datos (áreas, estados) y se usa con moderación.
+ * Tokens de diseño de SIGEI TIC — según el manual de marca.
+ * Lienzo niebla azulada, superficies blancas que flotan sobre sombras suaves,
+ * controles en píldora y el azul SIGEI como color de acción. El ámbar se
+ * reserva para el punto de la i. El color restante proviene de los datos
+ * (áreas, estados) y se usa con moderación. El tema oscuro es azul marino.
  */
 :root {
-  --bg: #f2f4f5; /* Canvas Mist */
-  --surface: #ffffff; /* Pure White */
-  --surface-2: #f2f4f5; /* relleno activo y lavados */
-  --surface-3: #e6e8e9;
-  --ink: #000000; /* Ink Black */
-  --ink-2: #332f2d; /* Slate Ink */
-  --muted: #787574; /* Muted Gray */
-  --line: #ebebeb; /* Faint Border */
-  --line-strong: #cccccc; /* Cool Stone */
+  --bg: #f1f5fa; /* Niebla */
+  --surface: #ffffff;
+  --surface-2: #f1f5fa; /* relleno activo y lavados */
+  --surface-3: #e3e9f2;
+  --ink: #1d222b; /* Grafito, un punto más oscuro para textos largos */
+  --ink-2: #3a4152;
+  --muted: #5a6272;
+  --line: #e4e9f0;
+  --line-strong: #c9d2df;
 
-  /* La acción primaria es monocroma: píldora negra. */
-  --brand: #000000;
-  --brand-hover: #332f2d;
+  /* Acción primaria: píldora azul SIGEI con texto blanco (contraste 6,9:1). */
+  --brand: #0050d0;
+  --brand-hover: #0043b0;
   --brand-ink: #ffffff;
-  --brand-soft: #f2f4f5;
-  --brand-soft-ink: #000000;
+  --brand-soft: #e6efff;
+  --brand-soft-ink: #0043b0;
 
-  /* Único acento saturado. */
-  --accent: #5433eb; /* Shop Violet */
-  --accent-wash: #c0b5f3; /* Violet Wash */
-  --accent-shadow: rgba(69, 36, 219, 0.34);
+  /* Acento: foco, búsqueda y selección. */
+  --accent: #0050d0;
+  --accent-wash: #c4d9ff;
+  --accent-shadow: rgba(0, 80, 208, 0.3);
 
-  /* Énfasis monocromo (antes lima): chip negro con texto blanco. */
-  --lime: #000000;
+  /* Colores del logotipo. */
+  --marca-tic: #0050d0;
+  --marca-punto: #ffa800;
+
+  /* Énfasis: chip marino con texto blanco. */
+  --lime: #0a1f44;
   --lime-ink: #ffffff;
 
   /* Estados funcionales, apagados para no competir con el acento. */
@@ -56,28 +63,31 @@
 }
 
 .dark {
-  --bg: #0c0c0d;
-  --surface: #171718;
-  --surface-2: #222224;
-  --surface-3: #2c2c2f;
-  --ink: #f5f5f4;
-  --ink-2: #d4d1cf;
-  --muted: #9b9796;
-  --line: #2a2a2c;
-  --line-strong: #3d3d40;
+  --bg: #07101f; /* Marino profundo */
+  --surface: #0e1a2e;
+  --surface-2: #15233b;
+  --surface-3: #1d2d49;
+  --ink: #f2f5fa;
+  --ink-2: #cbd4e3;
+  --muted: #95a2b8;
+  --line: #1e2c44;
+  --line-strong: #314360;
 
-  --brand: #f5f5f4;
-  --brand-hover: #ffffff;
-  --brand-ink: #000000;
-  --brand-soft: #222224;
-  --brand-soft-ink: #f5f5f4;
+  --brand: #2f74ff;
+  --brand-hover: #4a86ff;
+  --brand-ink: #ffffff;
+  --brand-soft: #142a52;
+  --brand-soft-ink: #cfe0ff;
 
-  --accent: #7a61ff;
-  --accent-wash: #3a2f7a;
-  --accent-shadow: rgba(122, 97, 255, 0.4);
+  --accent: #4a9dff;
+  --accent-wash: #173a73;
+  --accent-shadow: rgba(47, 116, 255, 0.4);
 
-  --lime: #f5f5f4;
-  --lime-ink: #000000;
+  --marca-tic: #38d6ff;
+  --marca-punto: #ffc233;
+
+  --lime: #f2f5fa;
+  --lime-ink: #0a1f44;
 
   --ok: #7fc29b;
   --ok-soft: #16261d;
@@ -98,7 +108,11 @@
 
 @theme inline {
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', 'Inter Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-marca: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+
+  --color-marca-tic: var(--marca-tic);
+  --color-marca-punto: var(--marca-punto);
 
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -152,15 +166,13 @@
     @apply bg-bg font-sans text-[16px] leading-[1.38] text-ink;
     letter-spacing: -0.02em;
   }
-  /* La jerarquía se construye con tracking, no con negritas. */
-  h1 {
-    letter-spacing: -0.045em;
-    line-height: 1.1;
-  }
+  /* Títulos en Outfit, como indica el manual de marca. */
+  h1,
   h2,
   h3 {
-    letter-spacing: -0.035em;
-    line-height: 1.2;
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+    line-height: 1.15;
   }
   :focus-visible {
     outline: 2px solid var(--accent);
@@ -199,7 +211,7 @@
     @apply rounded-[28px] border border-transparent bg-surface shadow-soft;
   }
   .font-display {
-    letter-spacing: -0.035em;
+    letter-spacing: -0.015em;
   }
   .scrollbar-thin {
     scrollbar-width: thin;

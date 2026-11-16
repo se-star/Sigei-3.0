@@ -29,8 +29,8 @@ export default function SinInstitucion() {
     <div className="grid min-h-dvh place-items-center px-4 py-10">
       <div className="w-full max-w-lg">
         <div className="mb-8 flex items-center justify-center gap-3">
-          <Logo className="size-10" />
-          <Wordmark className="text-[44px] leading-none" />
+          <Logo className="size-12" />
+          <Wordmark className="text-[40px]" />
         </div>
         <div className="card p-6 sm:p-8">
           <span className="mb-4 grid size-12 place-items-center rounded-full bg-surface-2">

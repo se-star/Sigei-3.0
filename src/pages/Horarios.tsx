@@ -444,7 +444,7 @@ function MiHorario() {
   const exportar = () => {
     const hoy = new Date();
     const fin = `${ajustes.anio_lectivo}1130T235959`;
-    const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SIGEI 3.0//ES', 'X-WR-CALNAME:Mi horario de clases'];
+    const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SIGEI TIC//ES', 'X-WR-CALNAME:Mi horario de clases'];
     for (const b of mios) {
       const d = new Date(hoy);
       d.setDate(d.getDate() + ((b.dia - d.getDay() + 7) % 7));

@@ -24,19 +24,20 @@ export default function Login() {
       <div className="mx-auto flex max-w-[1200px] flex-col items-center">
         <Constelacion />
         <div className="anim-rise -mt-2 flex flex-col items-center text-center">
-          <div className="flex items-center gap-3">
-            <Logo className="size-12 sm:size-14" />
-            <Wordmark className="text-[64px] leading-none sm:text-[88px]" />
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Logo className="size-16 sm:size-[88px]" />
+            <Wordmark className="text-[52px] sm:text-[76px]" />
           </div>
+          <p className="mt-3 font-display text-[11px] font-medium tracking-[0.22em] text-muted sm:text-[13px]">GESTIÓN EDUCATIVA INSTITUCIONAL</p>
           <p className="mt-4 max-w-md text-[17px] text-ink-2">
-            Gestión educativa institucional: docentes, grupos, horarios y novedades en un solo lugar.
+            Docentes, grupos, horarios y novedades de su institución en un solo lugar.
           </p>
         </div>
         <div className="anim-rise card mt-10 w-full max-w-md p-6 sm:p-8">
           <Acceso />
         </div>
         <p className="mt-10 text-[13px] text-muted">
-          © {new Date().getFullYear()} SIGEI · Versión 3.0
+          © {new Date().getFullYear()} SIGEI TIC
           {servidorDatos && <span className="block text-center text-xs">Servidor de datos: {servidorDatos}</span>}
         </p>
       </div>
@@ -163,7 +164,7 @@ function AccesoDemo() {
   };
   return (
     <>
-      <h2 className="text-[26px] font-semibold">Explore SIGEI 3.0</h2>
+      <h2 className="text-[26px] font-semibold">Explore SIGEI TIC</h2>
       <p className="mt-1.5 text-[15px] text-muted">
         Modo demo: los datos son de ejemplo y se guardan solo en este navegador. Elija un rol para entrar.
       </p>
