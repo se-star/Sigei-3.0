@@ -26,7 +26,7 @@ function exportarICS(eventos: Evento[], nombre: string) {
   const f = (d: string) => d.replace(/-/g, '');
   const hm = (h: string) => h.replace(':', '') + '00';
   const esc = (s: string) => s.replace(/[\\;,]/g, (m) => '\\' + m).replace(/\n/g, '\\n');
-  const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SIGEI 3.0//ES', `X-WR-CALNAME:${esc(nombre)}`];
+  const lineas = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SIGEI TIC//ES', `X-WR-CALNAME:${esc(nombre)}`];
   for (const e of eventos) {
     lineas.push('BEGIN:VEVENT', `UID:${e.id}@sigei`, `SUMMARY:${esc(e.titulo)}`);
     if (e.hora_inicio) {

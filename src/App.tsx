@@ -113,8 +113,8 @@ function NuevaClave() {
     <div className="grid min-h-dvh place-items-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-8 flex items-center justify-center gap-3">
-          <Logo className="size-10" />
-          <Wordmark className="text-[44px] leading-none" />
+          <Logo className="size-12" />
+          <Wordmark className="text-[40px]" />
         </div>
         <div className="card p-6 sm:p-8">
           <h1 className="text-[26px] font-semibold">Cree su nueva contraseña</h1>
