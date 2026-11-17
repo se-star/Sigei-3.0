@@ -188,6 +188,16 @@ export function crearDatosDemo(cfg: ConfigDemo = DEMO_ALMENDROS) {
     carga_maxima: 22,
     fecha_ingreso: iso(new Date(2008 + (i % 14), (i * 3) % 12, 1 + i)),
     notas: '',
+    formacion: [
+      { id: `f${i}a`, nivel: 'profesional', titulo: `Licenciatura en ${ar}`, institucion: ['Universidad de Antioquia', 'Universidad Pedagógica Nacional', 'Universidad del Valle'][i % 3], anio: 1998 + (i % 18) },
+      ...(i % 3 === 0
+        ? [{ id: `f${i}b`, nivel: 'especializacion' as const, titulo: 'Especialización en Pedagogía', institucion: 'Universidad Católica de Oriente', anio: 2004 + (i % 18) }]
+        : i % 3 === 1
+          ? [{ id: `f${i}b`, nivel: 'maestria' as const, titulo: 'Maestría en Educación', institucion: 'Universidad de Medellín', anio: 2010 + (i % 12) }]
+          : []),
+    ],
+    experiencia: [{ id: `e${i}`, cargo: 'Docente de aula', institucion: ['I. E. San Juan Bosco', 'Colegio La Presentación', 'I. E. Rural El Carmen'][i % 3], desde: 2000 + (i % 8), hasta: 2008 + (i % 14) }],
+    documentos: [],
   }));
   const doc = (n: string) => docentes.find((d) => d.nombres.startsWith(n))!.id;
 

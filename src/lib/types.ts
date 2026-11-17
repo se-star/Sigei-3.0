@@ -95,6 +95,45 @@ export interface Docente extends Base {
   carga_maxima: number;
   fecha_ingreso: string | null;
   notas: string;
+  /* Hoja de vida (migración 0006). Pueden faltar en datos anteriores. */
+  formacion?: Formacion[];
+  experiencia?: Experiencia[];
+  documentos?: DocumentoDocente[];
+}
+
+export type NivelFormacion =
+  | 'normalista'
+  | 'tecnico'
+  | 'tecnologo'
+  | 'profesional'
+  | 'especializacion'
+  | 'maestria'
+  | 'doctorado'
+  | 'otro';
+
+export interface Formacion {
+  id: string;
+  nivel: NivelFormacion;
+  titulo: string;
+  institucion: string;
+  anio: number | null;
+}
+
+export interface Experiencia {
+  id: string;
+  cargo: string;
+  institucion: string;
+  desde: number | null; // año
+  hasta: number | null; // año; null = actual
+}
+
+export type CategoriaDocumento = 'titulo' | 'nombramiento' | 'identidad' | 'certificado' | 'evaluacion' | 'otro';
+
+export interface DocumentoDocente extends Soporte {
+  id: string;
+  categoria: CategoriaDocumento;
+  descripcion: string;
+  subido_en: string;
 }
 
 export type Nivel = 'preescolar' | 'primaria' | 'secundaria' | 'media';

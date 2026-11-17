@@ -190,6 +190,24 @@ export function sugerirNombreGrupo(gradoNombre: string, existentes: string[], fo
   return null;
 }
 
+/**
+ * Nombres para crear `cantidad` grupos nuevos de un grado, saltando los que ya
+ * existen. Si el grado no es del catálogo, numera a partir de su nombre («Aceleración 1»).
+ */
+export function nombresGruposNuevos(gradoNombre: string, existentes: string[], cantidad: number, formato: FormatoGrupo): string[] {
+  const clave = (s: string) => norm(s).replace(/\s/g, '');
+  const usados = new Set(existentes.map(clave));
+  const tope = formato === 'letra' && gradoDelCatalogo(gradoNombre) ? 26 : 99;
+  const out: string[] = [];
+  for (let n = 1; n <= tope && out.length < cantidad; n++) {
+    const nombre = nombreGrupoSegun(gradoNombre, n, formato) ?? `${gradoNombre.trim()} ${n}`;
+    if (usados.has(clave(nombre))) continue;
+    usados.add(clave(nombre));
+    out.push(nombre);
+  }
+  return out;
+}
+
 export function porId<T extends { id: ID }>(lista: T[] | undefined): Map<ID, T> {
   return new Map((lista ?? []).map((x) => [x.id, x]));
 }

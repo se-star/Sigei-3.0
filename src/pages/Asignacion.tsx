@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, BookOpenCheck, Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Avatar, Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Progreso, Segmentos, Selector, Tarjeta, Vacio } from '@/components/ui';
 import { Buscador } from '@/components/ui/Buscador';
@@ -29,6 +29,15 @@ export default function Asignacion() {
   const [q, setQ] = useState('');
   const [grupoSel, setGrupoSel] = useState('');
   const [form, setForm] = useState<{ abierto: boolean; asig?: TAsignacion; docente_id?: ID; grupo_id?: ID }>({ abierto: false });
+  const [params, setParams] = useSearchParams();
+  // Desde la ficha del docente: /asignacion?docente=ID abre «Asignar» con ese docente.
+  useEffect(() => {
+    const d = params.get('docente');
+    if (d && puede) {
+      setForm({ abierto: true, docente_id: d });
+      setParams({}, { replace: true });
+    }
+  }, [params, puede, setParams]);
 
   const lista = asignaciones ?? [];
   const asg = porId(asignaturas);

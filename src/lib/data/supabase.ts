@@ -38,6 +38,8 @@ function fallo(error: { message: string; code?: string } | null): asserts error 
   if (error.code === '42501') throw new Error('No tiene permisos para realizar esta acción.');
   if (error.code === '23505') throw new Error('Ya existe un registro con esos datos.');
   if (error.code === '23503') throw new Error('Este registro está relacionado con otros datos y no se puede eliminar.');
+  if (/Could not find the '(formacion|experiencia|documentos)' column/i.test(error.message))
+    throw new Error('Falta activar la hoja de vida: ejecute en Supabase la migración 0006_hoja_de_vida.sql.');
   if (error.code === '42P01' || /relation .* does not exist|Could not find the table/i.test(error.message))
     throw new Error('La base de datos no está actualizada. Ejecute en Supabase la migración más reciente (supabase/migrations).');
   throw new Error(error.message);

@@ -97,4 +97,12 @@ describe('nombres de grupos', () => {
     expect(sugerirNombreGrupo('Octavo', ['801'], 'numero')).toBe('802');
     expect(sugerirNombreGrupo('Grado especial', [], 'grado')).toBeNull();
   });
+
+  it('propone varios grupos nuevos saltando los existentes', async () => {
+    const { nombresGruposNuevos } = await import('./utils');
+    expect(nombresGruposNuevos('Sexto', ['6°2'], 3, 'grado')).toEqual(['6°1', '6°3', '6°4']);
+    expect(nombresGruposNuevos('Primero', ['1A'], 2, 'letra')).toEqual(['1B', '1C']);
+    expect(nombresGruposNuevos('Aceleración', ['Aceleración 1'], 2, 'grado')).toEqual(['Aceleración 2', 'Aceleración 3']);
+    expect(nombresGruposNuevos('Primero', [], 30, 'letra')).toHaveLength(26);
+  });
 });
