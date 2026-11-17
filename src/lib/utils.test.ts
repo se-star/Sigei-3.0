@@ -98,6 +98,17 @@ describe('nombres de grupos', () => {
     expect(sugerirNombreGrupo('Grado especial', [], 'grado')).toBeNull();
   });
 
+  it('sabe en qué sedes se ofrece un grado', async () => {
+    const { gradoEnSede, sedesDelGrado } = await import('./utils');
+    const sedes = ['a', 'b'];
+    expect(gradoEnSede({}, 'a', sedes)).toBe(true);
+    expect(gradoEnSede({ sedes: ['b'] }, 'a', sedes)).toBe(false);
+    expect(gradoEnSede({ sedes: ['b'] }, 'b', sedes)).toBe(true);
+    // Una sede que ya no existe no cuenta: el grado vuelve a ser de todas.
+    expect(gradoEnSede({ sedes: ['vieja'] }, 'a', sedes)).toBe(true);
+    expect(sedesDelGrado({ sedes: ['a', 'vieja'] }, sedes)).toEqual(['a']);
+  });
+
   it('propone varios grupos nuevos saltando los existentes', async () => {
     const { nombresGruposNuevos } = await import('./utils');
     expect(nombresGruposNuevos('Sexto', ['6°2'], 3, 'grado')).toEqual(['6°1', '6°3', '6°4']);

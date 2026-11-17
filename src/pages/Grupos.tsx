@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/useToast';
 import { useFormulario } from '@/hooks/useFormulario';
 import { etiqueta, FORMATOS_GRUPO, GRADOS_COLOMBIA, JORNADAS, NIVELES } from '@/lib/catalogos';
 import type { Grado, Grupo, Nuevo, Sede } from '@/lib/types';
-import { cx, nombreDocente, nombresGruposNuevos, norm, porId, sugerirNombreGrupo } from '@/lib/utils';
+import { cx, gradoEnSede, nombreDocente, nombresGruposNuevos, norm, porId, sedesDelGrado, sugerirNombreGrupo } from '@/lib/utils';
 
 export default function Grupos() {
   const { editar } = useAuth();
@@ -37,9 +37,38 @@ export default function Grupos() {
   const totalEst = visibles.reduce((s, g) => s + g.estudiantes, 0);
   const totalCap = visibles.reduce((s, g) => s + g.capacidad, 0);
   const sedeElegida = sedes.find((s) => s.id === sedeSel);
+  const sedeIds = sedes.map((s) => s.id);
+  // Con una sede elegida se ven sus grados (y los que ya tienen grupos allí).
+  const gradosVisibles = sedeElegida
+    ? ordenados.filter((g) => gradoEnSede(g, sedeElegida.id, sedeIds) || grupos.some((x) => x.grado_id === g.id && x.sede_id === sedeElegida.id))
+    : ordenados;
+  const nombresSedes = (ids: string[]) => ids.map((id) => sedes.find((s) => s.id === id)?.nombre).filter(Boolean).join(', ');
   const verSedes = sedes.length > 1 || (sedes.length === 1 && grupos.some((g) => !g.sede_id));
 
   const borrarGrado = async (g: Grado) => {
+    // Con una sede elegida, el grado se quita solo de esa sede si se ofrece en otras.
+    if (sedeElegida && sedes.length > 1) {
+      const actuales = sedesDelGrado(g, sedeIds);
+      const quedan = (actuales.length ? actuales : sedeIds).filter((id) => id !== sedeElegida.id);
+      if (quedan.length) {
+        const aqui = grupos.filter((x) => x.grado_id === g.id && x.sede_id === sedeElegida.id).length;
+        if (aqui) return toast.error(`Primero elimine o mueva los ${aqui} grupos de ${g.nombre} en ${sedeElegida.nombre}.`);
+        const ok = await confirmar({
+          titulo: `Quitar ${g.nombre} de ${sedeElegida.nombre}`,
+          texto: `El grado se seguirá ofreciendo en ${nombresSedes(quedan)}.`,
+          confirmar: 'Quitar',
+          peligro: true,
+        });
+        if (!ok) return;
+        try {
+          await mGrado.editar.mutateAsync({ id: g.id, cambios: { sedes: quedan } });
+          toast.ok(`${g.nombre} ya no se ofrece en ${sedeElegida.nombre}.`);
+        } catch (e) {
+          toast.error(e);
+        }
+        return;
+      }
+    }
     const hijos = grupos.filter((x) => x.grado_id === g.id).length;
     if (hijos) return toast.error(`Primero elimine o mueva los ${hijos} grupos de ${g.nombre}.`);
     if (!(await confirmar({ titulo: 'Eliminar grado', texto: `¿Eliminar el grado ${g.nombre}?`, confirmar: 'Eliminar', peligro: true }))) return;
@@ -102,6 +131,15 @@ export default function Grupos() {
 
       {isLoading ? (
         <Cargando />
+      ) : sedeElegida && ordenados.length && !gradosVisibles.length ? (
+        <div className="card">
+          <Vacio
+            icono={<Network className="size-6" />}
+            titulo={`${sedeElegida.nombre} aún no tiene grados`}
+            texto="Agregue los grados que se ofrecen en esta sede. Solo se crearán para ella."
+            accion={puede && <Boton onClick={() => setFormGrado({ abierto: true })}>Agregar grados</Boton>}
+          />
+        </div>
       ) : !ordenados.length ? (
         <div className="card">
           <Vacio
@@ -114,7 +152,7 @@ export default function Grupos() {
       ) : (
         <div className="flex flex-col gap-8">
           {NIVELES.map((nivel) => {
-            const delNivel = ordenados.filter((g) => g.nivel === nivel.valor);
+            const delNivel = gradosVisibles.filter((g) => g.nivel === nivel.valor);
             if (!delNivel.length) return null;
             return (
               <section key={nivel.valor}>
@@ -133,6 +171,9 @@ export default function Grupos() {
                             <p className="text-xs text-muted">
                               {hijos.length} {hijos.length === 1 ? 'grupo' : 'grupos'} · {hijos.reduce((s, g) => s + g.estudiantes, 0)} estudiantes
                             </p>
+                            {!sedeElegida && sedes.length > 1 && sedesDelGrado(gr, sedeIds).length > 0 && (
+                              <p className="mt-0.5 text-xs font-medium text-brand">Solo en {nombresSedes(sedesDelGrado(gr, sedeIds))}</p>
+                            )}
                           </div>
                           {puede && (
                             <div className="flex gap-0.5">
@@ -142,7 +183,12 @@ export default function Grupos() {
                               <Boton variante="fantasma" tam="icono" onClick={() => setFormGrado({ abierto: true, grado: gr })} aria-label={`Editar ${gr.nombre}`}>
                                 <Pencil className="size-4" />
                               </Boton>
-                              <Boton variante="fantasma" tam="icono" onClick={() => borrarGrado(gr)} aria-label={`Eliminar ${gr.nombre}`}>
+                              <Boton
+                                variante="fantasma"
+                                tam="icono"
+                                onClick={() => borrarGrado(gr)}
+                                aria-label={sedeElegida && sedes.length > 1 ? `Quitar ${gr.nombre} de ${sedeElegida.nombre}` : `Eliminar ${gr.nombre}`}
+                              >
                                 <Trash2 className="size-4" />
                               </Boton>
                             </div>
@@ -206,7 +252,7 @@ export default function Grupos() {
         </div>
       )}
 
-      <FormGrado {...formGrado} siguienteOrden={ordenados.length} onCerrar={() => setFormGrado({ abierto: false })} />
+      <FormGrado {...formGrado} sede={sedeElegida} sedes={sedes} siguienteOrden={ordenados.length} onCerrar={() => setFormGrado({ abierto: false })} />
       <FormGrupo
         {...formGrupo}
         grados={ordenados}
@@ -219,19 +265,47 @@ export default function Grupos() {
   );
 }
 
-function FormGrado({ abierto, grado, onCerrar, siguienteOrden }: { abierto: boolean; grado?: Grado; onCerrar: () => void; siguienteOrden: number }) {
+function FormGrado({
+  abierto,
+  grado,
+  sede,
+  sedes,
+  onCerrar,
+  siguienteOrden,
+}: {
+  abierto: boolean;
+  grado?: Grado;
+  /** Sede elegida en la página: los grados nuevos se crean solo para ella. */
+  sede?: Sede;
+  sedes: Sede[];
+  onCerrar: () => void;
+  siguienteOrden: number;
+}) {
   // Al crear se eligen grados del catálogo (varios a la vez); al editar se ajustan sus datos.
   return grado ? (
-    <EditarGrado abierto={abierto} grado={grado} onCerrar={onCerrar} />
+    <EditarGrado abierto={abierto} grado={grado} sedes={sedes} onCerrar={onCerrar} />
   ) : (
-    <AgregarGrados abierto={abierto} onCerrar={onCerrar} siguienteOrden={siguienteOrden} />
+    <AgregarGrados abierto={abierto} sede={sede} sedes={sedes} onCerrar={onCerrar} siguienteOrden={siguienteOrden} />
   );
 }
 
 /** Agregar grados: se marcan los del catálogo colombiano que ofrece la institución, o se escribe otro. */
-function AgregarGrados({ abierto, onCerrar, siguienteOrden }: { abierto: boolean; onCerrar: () => void; siguienteOrden: number }) {
+function AgregarGrados({
+  abierto,
+  sede,
+  sedes,
+  onCerrar,
+  siguienteOrden,
+}: {
+  abierto: boolean;
+  sede?: Sede;
+  sedes: Sede[];
+  onCerrar: () => void;
+  siguienteOrden: number;
+}) {
   const { data: grados = [] } = useTabla('grados');
-  const { crear } = useMutar('grados');
+  const { crear, editar } = useMutar('grados');
+  const sedeIds = sedes.map((s) => s.id);
   const toast = useToast();
   const [marcados, setMarcados] = useState<string[]>([]);
   const [otro, setOtro] = useState('');
@@ -244,8 +318,24 @@ function AgregarGrados({ abierto, onCerrar, siguienteOrden }: { abierto: boolean
     }
   }, [abierto]);
 
-  const existe = (nombre: string) => grados.some((g) => norm(g.nombre) === norm(nombre));
+  const buscar = (nombre: string) => grados.find((g) => norm(g.nombre) === norm(nombre));
+  // Con sede: un grado «existe» si ya se ofrece en esa sede. Los de otras sedes se pueden sumar a esta.
+  const existe = (nombre: string) => {
+    const g = buscar(nombre);
+    return !!g && (!sede || gradoEnSede(g, sede.id, sedeIds));
+  };
   const disponibles = GRADOS_COLOMBIA.filter((g) => !existe(g.nombre));
+
+  /** Crea el grado para la sede (o para todas) o, si ya existe en otra sede, le suma esta. */
+  const agregar = async (nombre: string, nivel: Grado['nivel'], orden: number) => {
+    const g = buscar(nombre);
+    if (g && sede) {
+      const actuales = sedesDelGrado(g, sedeIds);
+      await editar.mutateAsync({ id: g.id, cambios: { sedes: soloSiFaltan([...new Set([...actuales, sede.id])], sedeIds) } });
+    } else if (!g) {
+      await crear.mutateAsync({ nombre, nivel, orden, ...(sede ? { sedes: [sede.id] } : {}) });
+    }
+  };
 
   const guardar = async () => {
     const otroLimpio = otro.trim();
@@ -253,11 +343,11 @@ function AgregarGrados({ abierto, onCerrar, siguienteOrden }: { abierto: boolean
     if (otroLimpio && existe(otroLimpio)) return toast.error(`Ya existe el grado ${otroLimpio}.`);
     setGuardando(true);
     try {
-      for (const g of GRADOS_COLOMBIA.filter((x) => marcados.includes(x.nombre)))
-        await crear.mutateAsync({ nombre: g.nombre, nivel: g.nivel, orden: g.orden });
-      if (otroLimpio) await crear.mutateAsync({ nombre: otroLimpio, nivel: nivelOtro, orden: Math.max(siguienteOrden, 14) });
+      for (const g of GRADOS_COLOMBIA.filter((x) => marcados.includes(x.nombre))) await agregar(g.nombre, g.nivel, g.orden);
+      if (otroLimpio) await agregar(otroLimpio, nivelOtro, Math.max(siguienteOrden, 14));
       const n = marcados.length + (otroLimpio ? 1 : 0);
-      toast.ok(n === 1 ? 'Grado creado.' : `${n} grados creados.`);
+      const dondeTxt = sede ? ` en ${sede.nombre}` : '';
+      toast.ok(n === 1 ? `Grado agregado${dondeTxt}.` : `${n} grados agregados${dondeTxt}.`);
       onCerrar();
     } catch (e) {
       toast.error(e);
@@ -270,8 +360,14 @@ function AgregarGrados({ abierto, onCerrar, siguienteOrden }: { abierto: boolean
     <Modal
       abierto={abierto}
       onCerrar={onCerrar}
-      titulo="Agregar grados"
-      descripcion="Marque los grados que ofrece la institución."
+      titulo={sede ? `Agregar grados a ${sede.nombre}` : 'Agregar grados'}
+      descripcion={
+        sede
+          ? `Marque los grados que se ofrecen en ${sede.nombre}. Solo se crearán para esta sede.`
+          : sedes.length > 1
+            ? 'Marque los grados que ofrece la institución. Se crearán para todas las sedes; para una sola, elija antes la sede en la página.'
+            : 'Marque los grados que ofrece la institución.'
+      }
       pie={
         <>
           <Boton variante="secundario" onClick={onCerrar}>
@@ -285,7 +381,9 @@ function AgregarGrados({ abierto, onCerrar, siguienteOrden }: { abierto: boolean
     >
       <div className="flex flex-col gap-5">
         {disponibles.length === 0 ? (
-          <p className="rounded-[20px] bg-surface-2 p-4 text-sm text-ink-2">La institución ya tiene todos los grados de preescolar, básica y media.</p>
+          <p className="rounded-[20px] bg-surface-2 p-4 text-sm text-ink-2">
+            {sede ? `${sede.nombre} ya tiene` : 'La institución ya tiene'} todos los grados de preescolar, básica y media.
+          </p>
         ) : (
           NIVELES.map((nivel) => {
             const delNivel = disponibles.filter((g) => g.nivel === nivel.valor);
@@ -321,6 +419,7 @@ function AgregarGrados({ abierto, onCerrar, siguienteOrden }: { abierto: boolean
                       >
                         {sel && <Check className="size-3.5" />}
                         {g.nombre}
+                        {sede && buscar(g.nombre) && <span className={cx('text-xs', sel ? 'opacity-80' : 'text-muted')}>· otra sede</span>}
                       </button>
                     );
                   })}
@@ -347,18 +446,39 @@ function AgregarGrados({ abierto, onCerrar, siguienteOrden }: { abierto: boolean
   );
 }
 
-function EditarGrado({ abierto, grado, onCerrar }: { abierto: boolean; grado: Grado; onCerrar: () => void }) {
+function EditarGrado({ abierto, grado, sedes, onCerrar }: { abierto: boolean; grado: Grado; sedes: Sede[]; onCerrar: () => void }) {
   const { editar } = useMutar('grados');
+  const { data: grupos = [] } = useTabla('grupos');
   const toast = useToast();
+  const sedeIds = sedes.map((s) => s.id);
   const f = useFormulario<Nuevo<Grado>>({ nombre: grado.nombre, nivel: grado.nivel, orden: grado.orden });
+  const [enSedes, setEnSedes] = useState<string[]>([]);
   useEffect(() => {
-    if (abierto) f.reiniciar({ nombre: grado.nombre, nivel: grado.nivel, orden: grado.orden });
+    if (abierto) {
+      f.reiniciar({ nombre: grado.nombre, nivel: grado.nivel, orden: grado.orden });
+      setEnSedes(sedesDelGrado(grado, sedeIds));
+    }
   }, [abierto, grado]);
+  const originales = sedesDelGrado(grado, sedeIds);
+  const cambioSedes = enSedes.length !== originales.length || enSedes.some((s) => !originales.includes(s));
 
   const guardar = async () => {
     if (!f.validar({ nombre: (v) => !v.nombre.trim() && 'Ingrese el nombre del grado.' })) return;
+    // No se puede quitar una sede donde el grado ya tiene grupos.
+    if (enSedes.length) {
+      const conGrupos = sedes.filter((s) => !enSedes.includes(s.id) && grupos.some((g) => g.grado_id === grado.id && g.sede_id === s.id));
+      if (conGrupos.length) return toast.error(`${grado.nombre} tiene grupos en ${conGrupos.map((s) => s.nombre).join(', ')}. Muévalos o elimínelos antes de quitar esa sede.`);
+    }
     try {
-      await editar.mutateAsync({ id: grado.id, cambios: { ...f.valores, nombre: f.valores.nombre.trim(), orden: Number(f.valores.orden) || 0 } });
+      await editar.mutateAsync({
+        id: grado.id,
+        cambios: {
+          nombre: f.valores.nombre.trim(),
+          nivel: f.valores.nivel,
+          orden: Number(f.valores.orden) || 0,
+          ...(cambioSedes ? { sedes: soloSiFaltan(enSedes, sedeIds) } : {}),
+        },
+      });
       toast.ok('Grado actualizado.');
       onCerrar();
     } catch (e) {
@@ -401,6 +521,31 @@ function EditarGrado({ abierto, grado, onCerrar }: { abierto: boolean; grado: Gr
         <Campo etiqueta="Orden" ayuda="Posición del grado en las listas (0 = primero).">
           {(id) => <Entrada id={id} type="number" min={0} value={f.valores.orden} onChange={(e) => f.set('orden', Number(e.target.value))} />}
         </Campo>
+        {sedes.length > 1 && (
+          <fieldset>
+            <legend className="mb-2 text-[13px] font-medium text-ink-2">Sedes donde se ofrece</legend>
+            <div className="flex flex-wrap gap-2">
+              {[{ id: '', nombre: 'Todas las sedes' }, ...sedes].map((s) => {
+                const sel = s.id ? enSedes.includes(s.id) : enSedes.length === 0;
+                return (
+                  <button
+                    key={s.id || 'todas'}
+                    type="button"
+                    aria-pressed={sel}
+                    onClick={() => setEnSedes(!s.id ? [] : sel ? enSedes.filter((x) => x !== s.id) : [...enSedes, s.id])}
+                    className={cx(
+                      'inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition',
+                      sel ? 'border-brand bg-brand text-brand-ink' : 'border-line bg-surface hover:border-line-strong',
+                    )}
+                  >
+                    {sel && <Check className="size-3.5" />}
+                    {s.nombre}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+        )}
         <button type="submit" hidden />
       </form>
     </Modal>
@@ -447,8 +592,9 @@ function FormGrupo({
   };
   useEffect(() => {
     if (!abierto) return;
-    const gradoInicial = grado_id ?? grados[0]?.id ?? '';
     const sedeInicial = sede_id ?? sedes.find((s) => s.principal)?.id ?? sedes[0]?.id ?? null;
+    const ids = sedes.map((s) => s.id);
+    const gradoInicial = grado_id ?? (sedeInicial ? grados.find((g) => gradoEnSede(g, sedeInicial, ids)) : grados[0])?.id ?? '';
     f.reiniciar(grupo ?? { ...vacio, grado_id: gradoInicial, nombre: sugerir(gradoInicial), sede_id: sedeInicial });
     setNombreManual(!!grupo);
     setModo('uno');
@@ -530,6 +676,20 @@ function FormGrupo({
   };
 
   const varios = !grupo && modo === 'varios';
+  const sedeIdsForm = sedes.map((s) => s.id);
+  // Grados que se ofrecen en la sede elegida en las tarjetas (o todos si no hay sede).
+  const gradosSede = v.sede_id ? ordenGrados.filter((g) => gradoEnSede(g, v.sede_id!, sedeIdsForm) || g.id === grupo?.grado_id) : ordenGrados;
+  const cambiarSede = (id: string) => {
+    set('sede_id', id || null);
+    if (!id) return;
+    const libres = ordenGrados.filter((g) => gradoEnSede(g, id, sedeIdsForm));
+    setGradosSel((s) => s.filter((x) => libres.some((g) => g.id === x)));
+    if (!grupo && v.grado_id && !libres.some((g) => g.id === v.grado_id)) {
+      const primero = libres[0]?.id ?? '';
+      set('grado_id', primero);
+      if (!nombreManual) set('nombre', sugerir(primero));
+    }
+  };
   return (
     <Modal
       abierto={abierto}
@@ -570,7 +730,7 @@ function FormGrupo({
           sedes={sedes}
           grupos={grupos}
           valor={v.sede_id ?? ''}
-          onCambio={(id) => set('sede_id', id || null)}
+          onCambio={cambiarSede}
           compacto
           etiqueta={varios ? 'Sede donde se crearán los grupos' : 'Sede del grupo'}
           titulo
@@ -581,7 +741,8 @@ function FormGrupo({
           <fieldset>
             <legend className="mb-2 text-[13px] font-medium text-ink-2">Grados</legend>
             <div className="flex flex-wrap gap-2">
-              {ordenGrados.map((g) => {
+              {gradosSede.length === 0 && <p className="text-sm text-muted">Esta sede aún no tiene grados. Agréguelos desde «Agregar grados».</p>}
+              {gradosSede.map((g) => {
                 const sel = gradosSel.includes(g.id);
                 return (
                   <button
@@ -601,7 +762,7 @@ function FormGrupo({
               })}
             </div>
             <div className="mt-2 flex gap-3 text-sm">
-              <button type="button" className="font-semibold text-brand hover:underline" onClick={() => setGradosSel(ordenGrados.map((g) => g.id))}>
+              <button type="button" className="font-semibold text-brand hover:underline" onClick={() => setGradosSel(gradosSede.map((g) => g.id))}>
                 Elegir todos
               </button>
               <button type="button" className="text-muted hover:text-ink hover:underline" onClick={() => setGradosSel([])}>
@@ -678,7 +839,7 @@ function FormGrupo({
                 }}
               >
                 <option value="">Seleccione…</option>
-                {grados.map((g) => (
+                {gradosSede.map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.nombre}
                   </option>
@@ -837,4 +998,9 @@ function TarjetasSede({
       </div>
     </div>
   );
+}
+
+/** Una lista con todas las sedes equivale a «todas»: se guarda vacía. */
+function soloSiFaltan(ids: string[], todas: string[]): string[] {
+  return todas.length > 0 && todas.every((t) => ids.includes(t)) ? [] : ids;
 }
