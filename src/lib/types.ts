@@ -146,6 +146,8 @@ export interface Grado extends Base {
   nombre: string;
   nivel: Nivel;
   orden: number;
+  /** Sedes donde se ofrece (migración 0007). Vacío = todas las sedes. */
+  sedes?: ID[];
 }
 
 export interface Grupo extends Base {

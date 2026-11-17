@@ -25,6 +25,8 @@ export function copiarConIdsNuevos(datos: Record<string, unknown>, nuevoId: () =
         const v = f[campo];
         if (typeof v === 'string' && v) f[campo] = mapa.get(v) ?? null;
       }
+      // Listas de sedes (grados por sede) también se reescriben.
+      if (Array.isArray(f.sedes)) f.sedes = (f.sedes as unknown[]).map((s) => (typeof s === 'string' ? mapa.get(s) : undefined)).filter(Boolean);
       // Las personas (usuarios) no viajan en el respaldo.
       if ('responsable_id' in f) f.responsable_id = null;
       if ('creado_por' in f) f.creado_por = null;

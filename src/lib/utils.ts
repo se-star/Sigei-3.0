@@ -208,6 +208,20 @@ export function nombresGruposNuevos(gradoNombre: string, existentes: string[], c
   return out;
 }
 
+/**
+ * ¿El grado se ofrece en la sede? Un grado sin sedes (o cuyas sedes ya no
+ * existen) se ofrece en todas.
+ */
+export function gradoEnSede(g: { sedes?: ID[] }, sedeId: ID, sedesExistentes: ID[]): boolean {
+  const propias = (g.sedes ?? []).filter((s) => sedesExistentes.includes(s));
+  return !propias.length || propias.includes(sedeId);
+}
+
+/** Sedes donde se ofrece el grado, solo las que existen; vacío = todas. */
+export function sedesDelGrado(g: { sedes?: ID[] }, sedesExistentes: ID[]): ID[] {
+  return (g.sedes ?? []).filter((s) => sedesExistentes.includes(s));
+}
+
 export function porId<T extends { id: ID }>(lista: T[] | undefined): Map<ID, T> {
   return new Map((lista ?? []).map((x) => [x.id, x]));
 }
