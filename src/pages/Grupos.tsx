@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Clock3, Network, Pencil, Plus, Trash2, UserRound } from 'lucide-react';
+import { Building2, Check, Clock3, Layers, Network, Pencil, Plus, Trash2, UserRound } from 'lucide-react';
 import { Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Progreso, Segmentos, Selector, Vacio } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 import { useAjustes, useMutar, useTabla } from '@/hooks/useDatos';
@@ -8,7 +8,7 @@ import { useConfirmar } from '@/hooks/useConfirmar';
 import { useToast } from '@/hooks/useToast';
 import { useFormulario } from '@/hooks/useFormulario';
 import { etiqueta, FORMATOS_GRUPO, GRADOS_COLOMBIA, JORNADAS, NIVELES } from '@/lib/catalogos';
-import type { Grado, Grupo, Nuevo } from '@/lib/types';
+import type { Grado, Grupo, Nuevo, Sede } from '@/lib/types';
 import { cx, nombreDocente, nombresGruposNuevos, norm, porId, sugerirNombreGrupo } from '@/lib/utils';
 
 export default function Grupos() {
@@ -25,11 +25,19 @@ export default function Grupos() {
   const toast = useToast();
   const [formGrado, setFormGrado] = useState<{ abierto: boolean; grado?: Grado }>({ abierto: false });
   const [formGrupo, setFormGrupo] = useState<{ abierto: boolean; grupo?: Grupo; grado_id?: string }>({ abierto: false });
+  // Sede elegida en las tarjetas: filtra los grupos y es la sede propuesta al crear. '' = todas.
+  const [sedeSel, setSedeSel] = useState('');
+  useEffect(() => {
+    if (sedeSel && sedeSel !== SIN_SEDE && !sedes.some((s) => s.id === sedeSel)) setSedeSel('');
+  }, [sedes, sedeSel]);
 
   const docs = porId(docentes);
   const ordenados = [...(grados ?? [])].sort((a, b) => a.orden - b.orden);
-  const totalEst = grupos.reduce((s, g) => s + g.estudiantes, 0);
-  const totalCap = grupos.reduce((s, g) => s + g.capacidad, 0);
+  const visibles = !sedeSel ? grupos : grupos.filter((g) => (sedeSel === SIN_SEDE ? !g.sede_id : g.sede_id === sedeSel));
+  const totalEst = visibles.reduce((s, g) => s + g.estudiantes, 0);
+  const totalCap = visibles.reduce((s, g) => s + g.capacidad, 0);
+  const sedeElegida = sedes.find((s) => s.id === sedeSel);
+  const verSedes = sedes.length > 1 || (sedes.length === 1 && grupos.some((g) => !g.sede_id));
 
   const borrarGrado = async (g: Grado) => {
     const hijos = grupos.filter((x) => x.grado_id === g.id).length;
@@ -64,7 +72,7 @@ export default function Grupos() {
     <>
       <Encabezado
         titulo="Grados y grupos"
-        descripcion={`${grupos.length} grupos · ${totalEst.toLocaleString('es-CO')} estudiantes · ocupación ${totalCap ? Math.round((totalEst / totalCap) * 100) : 0}%`}
+        descripcion={`${sedeElegida ? `${sedeElegida.nombre} · ` : ''}${visibles.length} grupos · ${totalEst.toLocaleString('es-CO')} estudiantes · ocupación ${totalCap ? Math.round((totalEst / totalCap) * 100) : 0}%`}
         acciones={
           puede && (
             <>
@@ -78,6 +86,19 @@ export default function Grupos() {
           )
         }
       />
+
+      {verSedes && !!ordenados.length && (
+        <TarjetasSede
+          className="mb-8"
+          sedes={sedes}
+          grupos={grupos}
+          valor={sedeSel}
+          onCambio={setSedeSel}
+          conTodas
+          conSinSede={grupos.some((g) => !g.sede_id)}
+          etiqueta="Filtrar los grupos por sede"
+        />
+      )}
 
       {isLoading ? (
         <Cargando />
@@ -103,7 +124,7 @@ export default function Grupos() {
                 </h2>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {delNivel.map((gr) => {
-                    const hijos = grupos.filter((g) => g.grado_id === gr.id).sort((a, b) => a.nombre.localeCompare(b.nombre));
+                    const hijos = visibles.filter((g) => g.grado_id === gr.id).sort((a, b) => a.nombre.localeCompare(b.nombre));
                     return (
                       <article key={gr.id} className="card flex flex-col">
                         <header className="flex items-center justify-between gap-2 border-b border-line px-5 py-3.5">
@@ -128,7 +149,7 @@ export default function Grupos() {
                           )}
                         </header>
                         {hijos.length === 0 ? (
-                          <p className="px-5 py-6 text-center text-sm text-muted">Sin grupos todavía.</p>
+                          <p className="px-5 py-6 text-center text-sm text-muted">{sedeElegida ? `Sin grupos en ${sedeElegida.nombre}.` : 'Sin grupos todavía.'}</p>
                         ) : (
                           <ul className="divide-y divide-line">
                             {hijos.map((g) => {
@@ -191,6 +212,7 @@ export default function Grupos() {
         grados={ordenados}
         docentes={docentes.filter((d) => d.estado === 'activo')}
         sedes={sedes}
+        sede_id={sedeSel && sedeSel !== SIN_SEDE ? sedeSel : undefined}
         onCerrar={() => setFormGrupo({ abierto: false })}
       />
     </>
@@ -392,6 +414,7 @@ function FormGrupo({
   grados,
   docentes,
   sedes,
+  sede_id,
   onCerrar,
 }: {
   abierto: boolean;
@@ -399,7 +422,9 @@ function FormGrupo({
   grado_id?: string;
   grados: Grado[];
   docentes: { id: string; nombres: string; apellidos: string }[];
-  sedes: { id: string; nombre: string }[];
+  sedes: Sede[];
+  /** Sede propuesta (la elegida en las tarjetas de la página). */
+  sede_id?: string;
   onCerrar: () => void;
 }) {
   const { crear, editar } = useMutar('grupos');
@@ -423,12 +448,13 @@ function FormGrupo({
   useEffect(() => {
     if (!abierto) return;
     const gradoInicial = grado_id ?? grados[0]?.id ?? '';
-    f.reiniciar(grupo ?? { ...vacio, grado_id: gradoInicial, nombre: sugerir(gradoInicial), sede_id: sedes[0]?.id ?? null });
+    const sedeInicial = sede_id ?? sedes.find((s) => s.principal)?.id ?? sedes[0]?.id ?? null;
+    f.reiniciar(grupo ?? { ...vacio, grado_id: gradoInicial, nombre: sugerir(gradoInicial), sede_id: sedeInicial });
     setNombreManual(!!grupo);
     setModo('uno');
     setGradosSel(gradoInicial ? [gradoInicial] : []);
     setCantidad(2);
-  }, [abierto, grupo, grado_id]);
+  }, [abierto, grupo, grado_id, sede_id]);
   const jornadas = JORNADAS.filter((j) => ajustes.jornadas.includes(j.valor) || j.valor === f.valores.jornada);
 
   const guardar = async () => {
@@ -538,6 +564,18 @@ function FormGrupo({
           ]}
         />
       )}
+      {sedes.length > 0 && (
+        <TarjetasSede
+          className="mb-5"
+          sedes={sedes}
+          grupos={grupos}
+          valor={v.sede_id ?? ''}
+          onCambio={(id) => set('sede_id', id || null)}
+          compacto
+          etiqueta={varios ? 'Sede donde se crearán los grupos' : 'Sede del grupo'}
+          titulo
+        />
+      )}
       {varios ? (
         <div className="flex flex-col gap-5">
           <fieldset>
@@ -596,18 +634,6 @@ function FormGrupo({
                 </Selector>
               )}
             </Campo>
-            <Campo etiqueta="Sede">
-              {(id) => (
-                <Selector id={id} value={v.sede_id ?? ''} onChange={(e) => set('sede_id', e.target.value || null)}>
-                  <option value="">Sin sede</option>
-                  {sedes.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.nombre}
-                    </option>
-                  ))}
-                </Selector>
-              )}
-            </Campo>
             <Campo etiqueta="Capacidad del aula">
               {(id) => <Entrada id={id} type="number" min={0} value={v.capacidad} onChange={(e) => set('capacidad', Number(e.target.value))} />}
             </Campo>
@@ -615,7 +641,7 @@ function FormGrupo({
           <div className="rounded-[20px] bg-surface-2 p-4">
             <p className="mb-2 text-[13px] font-medium text-ink-2">
               {totalPlan
-                ? `Se crearán ${totalPlan} ${totalPlan === 1 ? 'grupo' : 'grupos'}:`
+                ? `Se crearán ${totalPlan} ${totalPlan === 1 ? 'grupo' : 'grupos'}${sedes.find((x) => x.id === v.sede_id) ? ` en ${sedes.find((x) => x.id === v.sede_id)!.nombre}` : ''}:`
                 : gradosSel.length
                   ? 'No quedan nombres libres en los grados elegidos.'
                   : 'Elija los grados para ver los grupos que se crearán.'}
@@ -689,18 +715,6 @@ function FormGrupo({
               </Selector>
             )}
           </Campo>
-          <Campo etiqueta="Sede">
-            {(id) => (
-              <Selector id={id} value={v.sede_id ?? ''} onChange={(e) => set('sede_id', e.target.value || null)}>
-                <option value="">Sin sede</option>
-                {sedes.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nombre}
-                  </option>
-                ))}
-              </Selector>
-            )}
-          </Campo>
           <Campo etiqueta="Director de grupo" className="sm:col-span-2">
             {(id) => (
               <Selector id={id} value={v.director_id ?? ''} onChange={(e) => set('director_id', e.target.value || null)}>
@@ -726,3 +740,101 @@ function FormGrupo({
   );
 }
 
+
+const SIN_SEDE = '__sin_sede__';
+
+/** Tarjetas para elegir sede, con sus grupos y estudiantes. */
+function TarjetasSede({
+  sedes,
+  grupos,
+  valor,
+  onCambio,
+  conTodas,
+  conSinSede,
+  compacto,
+  etiqueta,
+  titulo,
+  className,
+}: {
+  sedes: Sede[];
+  grupos: Grupo[];
+  valor: string;
+  onCambio: (id: string) => void;
+  conTodas?: boolean;
+  conSinSede?: boolean;
+  compacto?: boolean;
+  etiqueta: string;
+  /** Muestra la etiqueta como título visible. */
+  titulo?: boolean;
+  className?: string;
+}) {
+  const ordenadas = [...sedes].sort((a, b) => Number(b.principal) - Number(a.principal) || a.nombre.localeCompare(b.nombre, 'es'));
+  const resumen = (lista: Grupo[]) => {
+    const est = lista.reduce((s, g) => s + g.estudiantes, 0);
+    return `${lista.length} ${lista.length === 1 ? 'grupo' : 'grupos'} · ${est.toLocaleString('es-CO')} est.`;
+  };
+  const opciones: { id: string; nombre: string; detalle: string; resumen: string; principal?: boolean; icono: 'todas' | 'sede' }[] = [
+    ...(conTodas ? [{ id: '', nombre: 'Todas las sedes', detalle: `${sedes.length} sedes`, resumen: resumen(grupos), icono: 'todas' as const }] : []),
+    ...ordenadas.map((s) => ({
+      id: s.id,
+      nombre: s.nombre,
+      detalle: s.direccion || 'Sin dirección registrada',
+      resumen: resumen(grupos.filter((g) => g.sede_id === s.id)),
+      principal: s.principal,
+      icono: 'sede' as const,
+    })),
+    ...(conSinSede ? [{ id: SIN_SEDE, nombre: 'Sin sede', detalle: 'Grupos sin sede asignada', resumen: resumen(grupos.filter((g) => !g.sede_id)), icono: 'sede' as const }] : []),
+  ];
+  return (
+    <div className={className}>
+      {titulo && <p className="mb-2 text-[13px] font-medium text-ink-2">{etiqueta}</p>}
+      <div
+        role="radiogroup"
+        aria-label={etiqueta}
+        className={cx('grid gap-3', compacto ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3')}
+      >
+        {opciones.map((o) => {
+          const sel = valor === o.id;
+          const Icono = o.icono === 'todas' ? Layers : Building2;
+          return (
+            <button
+              key={o.id || 'todas'}
+              type="button"
+              role="radio"
+              aria-checked={sel}
+              onClick={() => onCambio(o.id)}
+              className={cx(
+                'relative flex items-start gap-3 rounded-[20px] border bg-surface pr-9 text-left transition',
+                compacto ? 'p-3' : 'p-4 shadow-chip',
+                sel ? 'border-brand ring-2 ring-brand/20' : 'border-line hover:border-line-strong hover:shadow-pop',
+              )}
+            >
+              <span
+                className={cx(
+                  'grid shrink-0 place-items-center rounded-xl',
+                  compacto ? 'size-9' : 'size-11',
+                  sel ? 'bg-brand text-brand-ink' : 'bg-surface-2 text-ink-2',
+                )}
+              >
+                <Icono className={compacto ? 'size-4' : 'size-5'} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  <span className="leading-snug font-semibold break-words">{o.nombre}</span>
+                  {o.principal && <Insignia tono="brand">Principal</Insignia>}
+                </span>
+                <span className="block truncate text-xs text-muted">{o.detalle}</span>
+                <span className="mt-1 block text-xs font-medium text-ink-2 tabular-nums">{o.resumen}</span>
+              </span>
+              {sel && (
+                <span className="absolute top-3 right-3 grid size-5 place-items-center rounded-full bg-brand text-brand-ink">
+                  <Check className="size-3" />
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
