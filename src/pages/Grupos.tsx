@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Clock3, Network, Pencil, Plus, Trash2, UserRound } from 'lucide-react';
-import { Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Progreso, Selector, Vacio } from '@/components/ui';
+import { Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Progreso, Segmentos, Selector, Vacio } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 import { useAjustes, useMutar, useTabla } from '@/hooks/useDatos';
 import { useConfirmar } from '@/hooks/useConfirmar';
@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/useToast';
 import { useFormulario } from '@/hooks/useFormulario';
 import { etiqueta, FORMATOS_GRUPO, GRADOS_COLOMBIA, JORNADAS, NIVELES } from '@/lib/catalogos';
 import type { Grado, Grupo, Nuevo } from '@/lib/types';
-import { cx, nombreDocente, norm, porId, sugerirNombreGrupo } from '@/lib/utils';
+import { cx, nombreDocente, nombresGruposNuevos, norm, porId, sugerirNombreGrupo } from '@/lib/utils';
 
 export default function Grupos() {
   const { editar } = useAuth();
@@ -410,6 +410,11 @@ function FormGrupo({
   const f = useFormulario<Nuevo<Grupo>>(vacio);
   // El nombre se propone según el formato de la institución hasta que la persona lo cambie.
   const [nombreManual, setNombreManual] = useState(false);
+  // «Varios grupos»: crea de una vez la cantidad indicada en cada grado elegido.
+  const [modo, setModo] = useState<'uno' | 'varios'>('uno');
+  const [gradosSel, setGradosSel] = useState<string[]>([]);
+  const [cantidad, setCantidad] = useState(2);
+  const [creando, setCreando] = useState(false);
   const sugerir = (gradoId: string) => {
     const gr = grados.find((g) => g.id === gradoId);
     if (!gr) return '';
@@ -420,6 +425,9 @@ function FormGrupo({
     const gradoInicial = grado_id ?? grados[0]?.id ?? '';
     f.reiniciar(grupo ?? { ...vacio, grado_id: gradoInicial, nombre: sugerir(gradoInicial), sede_id: sedes[0]?.id ?? null });
     setNombreManual(!!grupo);
+    setModo('uno');
+    setGradosSel(gradoInicial ? [gradoInicial] : []);
+    setCantidad(2);
   }, [abierto, grupo, grado_id]);
   const jornadas = JORNADAS.filter((j) => ajustes.jornadas.includes(j.valor) || j.valor === f.valores.jornada);
 
@@ -453,103 +461,267 @@ function FormGrupo({
   };
 
   const { valores: v, set } = f;
+
+  /* ── Varios grupos ── */
+  const ordenGrados = [...grados].sort((a, b) => a.orden - b.orden);
+  const plan = ordenGrados
+    .filter((g) => gradosSel.includes(g.id))
+    .map((g) => {
+      const existentes = grupos.filter((x) => x.grado_id === g.id).map((x) => x.nombre);
+      // También se evitan nombres que otro grado ya usa en la misma jornada.
+      const enJornada = grupos.filter((x) => x.jornada === v.jornada).map((x) => x.nombre);
+      return { grado: g, nombres: nombresGruposNuevos(g.nombre, [...existentes, ...enJornada], cantidad, ajustes.formato_grupo) };
+    });
+  const totalPlan = plan.reduce((s, p) => s + p.nombres.length, 0);
+  const alternar = (id: string) => setGradosSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  const crearVarios = async () => {
+    if (!gradosSel.length) return toast.error('Elija al menos un grado.');
+    if (!totalPlan) return toast.error('No hay grupos nuevos para crear con esa cantidad.');
+    setCreando(true);
+    let hechos = 0;
+    try {
+      for (const p of plan)
+        for (const nombre of p.nombres) {
+          await crear.mutateAsync({
+            grado_id: p.grado.id,
+            nombre,
+            jornada: v.jornada,
+            sede_id: v.sede_id || null,
+            director_id: null,
+            capacidad: Number(v.capacidad) || 0,
+            estudiantes: 0,
+          });
+          hechos++;
+        }
+      toast.ok(hechos === 1 ? 'Se creó 1 grupo.' : `Se crearon ${hechos} grupos.`);
+      onCerrar();
+    } catch (e) {
+      toast.error(hechos ? `Se crearon ${hechos} grupos y luego hubo un error: ${(e as Error).message}` : e);
+    } finally {
+      setCreando(false);
+    }
+  };
+
+  const varios = !grupo && modo === 'varios';
   return (
     <Modal
       abierto={abierto}
       onCerrar={onCerrar}
-      titulo={grupo ? `Editar grupo ${grupo.nombre}` : 'Nuevo grupo'}
+      titulo={grupo ? `Editar grupo ${grupo.nombre}` : varios ? 'Nuevos grupos' : 'Nuevo grupo'}
+      ancho={varios ? 'lg' : 'md'}
       pie={
         <>
           <Boton variante="secundario" onClick={onCerrar}>
             Cancelar
           </Boton>
-          <Boton onClick={guardar} cargando={crear.isPending || editar.isPending}>
-            Guardar
-          </Boton>
+          {varios ? (
+            <Boton onClick={crearVarios} cargando={creando} disabled={!totalPlan}>
+              {totalPlan === 1 ? 'Crear 1 grupo' : `Crear ${totalPlan} grupos`}
+            </Boton>
+          ) : (
+            <Boton onClick={guardar} cargando={crear.isPending || editar.isPending}>
+              Guardar
+            </Boton>
+          )}
         </>
       }
     >
-      <form className="grid gap-4 sm:grid-cols-2" onSubmit={(e) => (e.preventDefault(), guardar())}>
-        <Campo etiqueta="Grado" requerido error={f.errores.grado_id}>
-          {(id) => (
-            <Selector
-              id={id}
-              value={v.grado_id}
-              onChange={(e) => {
-                set('grado_id', e.target.value);
-                if (!nombreManual && !grupo) set('nombre', sugerir(e.target.value));
-              }}
-            >
-              <option value="">Seleccione…</option>
-              {grados.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.nombre}
-                </option>
+      {!grupo && (
+        <Segmentos<'uno' | 'varios'>
+          className="mb-5"
+          valor={modo}
+          onCambio={setModo}
+          opciones={[
+            { valor: 'uno', etiqueta: 'Un grupo' },
+            { valor: 'varios', etiqueta: 'Varios grupos' },
+          ]}
+        />
+      )}
+      {varios ? (
+        <div className="flex flex-col gap-5">
+          <fieldset>
+            <legend className="mb-2 text-[13px] font-medium text-ink-2">Grados</legend>
+            <div className="flex flex-wrap gap-2">
+              {ordenGrados.map((g) => {
+                const sel = gradosSel.includes(g.id);
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    aria-pressed={sel}
+                    onClick={() => alternar(g.id)}
+                    className={cx(
+                      'inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition',
+                      sel ? 'border-brand bg-brand text-brand-ink' : 'border-line bg-surface hover:border-line-strong',
+                    )}
+                  >
+                    {sel && <Check className="size-3.5" />}
+                    {g.nombre}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex gap-3 text-sm">
+              <button type="button" className="font-semibold text-brand hover:underline" onClick={() => setGradosSel(ordenGrados.map((g) => g.id))}>
+                Elegir todos
+              </button>
+              <button type="button" className="text-muted hover:text-ink hover:underline" onClick={() => setGradosSel([])}>
+                Ninguno
+              </button>
+            </div>
+          </fieldset>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Campo etiqueta="Grupos nuevos por grado" ayuda="Se suman a los que ya existen.">
+              {(id) => (
+                <Entrada
+                  id={id}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={26}
+                  value={cantidad}
+                  onChange={(e) => setCantidad(Math.max(1, Math.min(26, Number(e.target.value) || 1)))}
+                />
+              )}
+            </Campo>
+            <Campo etiqueta="Jornada">
+              {(id) => (
+                <Selector id={id} value={v.jornada} onChange={(e) => set('jornada', e.target.value as Grupo['jornada'])}>
+                  {jornadas.map((j) => (
+                    <option key={j.valor} value={j.valor}>
+                      {j.etiqueta}
+                    </option>
+                  ))}
+                </Selector>
+              )}
+            </Campo>
+            <Campo etiqueta="Sede">
+              {(id) => (
+                <Selector id={id} value={v.sede_id ?? ''} onChange={(e) => set('sede_id', e.target.value || null)}>
+                  <option value="">Sin sede</option>
+                  {sedes.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.nombre}
+                    </option>
+                  ))}
+                </Selector>
+              )}
+            </Campo>
+            <Campo etiqueta="Capacidad del aula">
+              {(id) => <Entrada id={id} type="number" min={0} value={v.capacidad} onChange={(e) => set('capacidad', Number(e.target.value))} />}
+            </Campo>
+          </div>
+          <div className="rounded-[20px] bg-surface-2 p-4">
+            <p className="mb-2 text-[13px] font-medium text-ink-2">
+              {totalPlan
+                ? `Se crearán ${totalPlan} ${totalPlan === 1 ? 'grupo' : 'grupos'}:`
+                : gradosSel.length
+                  ? 'No quedan nombres libres en los grados elegidos.'
+                  : 'Elija los grados para ver los grupos que se crearán.'}
+            </p>
+            <ul className="flex flex-col gap-1.5">
+              {plan.map((p) => (
+                <li key={p.grado.id} className="flex flex-wrap items-center gap-1.5 text-sm">
+                  <span className="w-28 shrink-0 font-semibold">{p.grado.nombre}</span>
+                  {p.nombres.length ? (
+                    p.nombres.map((n) => (
+                      <span key={n} className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-semibold shadow-chip">
+                        {n}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-muted">No quedan nombres libres.</span>
+                  )}
+                </li>
               ))}
-            </Selector>
-          )}
-        </Campo>
-        <Campo
-          etiqueta="Nombre del grupo"
-          requerido
-          error={f.errores.nombre}
-          ayuda={!grupo && !nombreManual && v.nombre ? 'Propuesto según el formato de la institución.' : undefined}
-        >
-          {(id) => (
-            <Entrada
-              id={id}
-              value={f.valores.nombre}
-              onChange={(e) => {
-                setNombreManual(true);
-                f.set('nombre', e.target.value);
-              }}
-              placeholder={FORMATOS_GRUPO.find((x) => x.valor === ajustes.formato_grupo)?.ejemplo}
-            />
-          )}
-        </Campo>
-        <Campo etiqueta="Jornada">
-          {(id) => (
-            <Selector id={id} value={v.jornada} onChange={(e) => set('jornada', e.target.value as Grupo['jornada'])}>
-              {jornadas.map((j) => (
-                <option key={j.valor} value={j.valor}>
-                  {j.etiqueta}
-                </option>
-              ))}
-            </Selector>
-          )}
-        </Campo>
-        <Campo etiqueta="Sede">
-          {(id) => (
-            <Selector id={id} value={v.sede_id ?? ''} onChange={(e) => set('sede_id', e.target.value || null)}>
-              <option value="">Sin sede</option>
-              {sedes.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nombre}
-                </option>
-              ))}
-            </Selector>
-          )}
-        </Campo>
-        <Campo etiqueta="Director de grupo" className="sm:col-span-2">
-          {(id) => (
-            <Selector id={id} value={v.director_id ?? ''} onChange={(e) => set('director_id', e.target.value || null)}>
-              <option value="">Sin asignar</option>
-              {docentes.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {nombreDocente(d)}
-                </option>
-              ))}
-            </Selector>
-          )}
-        </Campo>
-        <Campo etiqueta="Estudiantes matriculados" error={f.errores.estudiantes}>
-          {(id) => <Entrada id={id} type="number" min={0} value={v.estudiantes} onChange={(e) => set('estudiantes', Number(e.target.value))} />}
-        </Campo>
-        <Campo etiqueta="Capacidad del aula">
-          {(id) => <Entrada id={id} type="number" min={0} value={v.capacidad} onChange={(e) => set('capacidad', Number(e.target.value))} />}
-        </Campo>
-        <button type="submit" hidden />
-      </form>
+            </ul>
+            <p className="mt-3 text-xs text-muted">El director de grupo y los estudiantes se completan después en cada grupo.</p>
+          </div>
+        </div>
+      ) : (
+        <form className="grid gap-4 sm:grid-cols-2" onSubmit={(e) => (e.preventDefault(), guardar())}>
+          <Campo etiqueta="Grado" requerido error={f.errores.grado_id}>
+            {(id) => (
+              <Selector
+                id={id}
+                value={v.grado_id}
+                onChange={(e) => {
+                  set('grado_id', e.target.value);
+                  if (!nombreManual && !grupo) set('nombre', sugerir(e.target.value));
+                }}
+              >
+                <option value="">Seleccione…</option>
+                {grados.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.nombre}
+                  </option>
+                ))}
+              </Selector>
+            )}
+          </Campo>
+          <Campo
+            etiqueta="Nombre del grupo"
+            requerido
+            error={f.errores.nombre}
+            ayuda={!grupo && !nombreManual && v.nombre ? 'Propuesto según el formato de la institución.' : undefined}
+          >
+            {(id) => (
+              <Entrada
+                id={id}
+                value={f.valores.nombre}
+                onChange={(e) => {
+                  setNombreManual(true);
+                  f.set('nombre', e.target.value);
+                }}
+                placeholder={FORMATOS_GRUPO.find((x) => x.valor === ajustes.formato_grupo)?.ejemplo}
+              />
+            )}
+          </Campo>
+          <Campo etiqueta="Jornada">
+            {(id) => (
+              <Selector id={id} value={v.jornada} onChange={(e) => set('jornada', e.target.value as Grupo['jornada'])}>
+                {jornadas.map((j) => (
+                  <option key={j.valor} value={j.valor}>
+                    {j.etiqueta}
+                  </option>
+                ))}
+              </Selector>
+            )}
+          </Campo>
+          <Campo etiqueta="Sede">
+            {(id) => (
+              <Selector id={id} value={v.sede_id ?? ''} onChange={(e) => set('sede_id', e.target.value || null)}>
+                <option value="">Sin sede</option>
+                {sedes.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nombre}
+                  </option>
+                ))}
+              </Selector>
+            )}
+          </Campo>
+          <Campo etiqueta="Director de grupo" className="sm:col-span-2">
+            {(id) => (
+              <Selector id={id} value={v.director_id ?? ''} onChange={(e) => set('director_id', e.target.value || null)}>
+                <option value="">Sin asignar</option>
+                {docentes.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {nombreDocente(d)}
+                  </option>
+                ))}
+              </Selector>
+            )}
+          </Campo>
+          <Campo etiqueta="Estudiantes matriculados" error={f.errores.estudiantes}>
+            {(id) => <Entrada id={id} type="number" min={0} value={v.estudiantes} onChange={(e) => set('estudiantes', Number(e.target.value))} />}
+          </Campo>
+          <Campo etiqueta="Capacidad del aula">
+            {(id) => <Entrada id={id} type="number" min={0} value={v.capacidad} onChange={(e) => set('capacidad', Number(e.target.value))} />}
+          </Campo>
+          <button type="submit" hidden />
+        </form>
+      )}
     </Modal>
   );
 }

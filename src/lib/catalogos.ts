@@ -1,5 +1,7 @@
 import type {
   Audiencia,
+  CategoriaDocumento,
+  NivelFormacion,
   EstadoDocente,
   EstadoNovedad,
   EstadoTarea,
@@ -23,6 +25,26 @@ export interface Opcion<V extends string = string> {
 }
 
 const op = <V extends string>(valor: V, etiqueta: string, tono?: Tono): Opcion<V> => ({ valor, etiqueta, tono });
+
+export const NIVELES_FORMACION: Opcion<NivelFormacion>[] = [
+  op('normalista', 'Normalista superior'),
+  op('tecnico', 'Técnico'),
+  op('tecnologo', 'Tecnólogo'),
+  op('profesional', 'Profesional / licenciatura'),
+  op('especializacion', 'Especialización'),
+  op('maestria', 'Maestría'),
+  op('doctorado', 'Doctorado'),
+  op('otro', 'Otro'),
+];
+
+export const CATEGORIAS_DOCUMENTO: Opcion<CategoriaDocumento>[] = [
+  op('titulo', 'Título o diploma'),
+  op('nombramiento', 'Acto de nombramiento'),
+  op('identidad', 'Documento de identidad'),
+  op('certificado', 'Certificado laboral'),
+  op('evaluacion', 'Evaluación de desempeño'),
+  op('otro', 'Otro'),
+];
 
 export const ROLES: Opcion<Rol>[] = [
   op('admin', 'Administrador', 'violet'),

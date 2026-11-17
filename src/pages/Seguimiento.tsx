@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ClipboardCheck, Pencil, Plus, Printer, Trash2, UserRoundCheck } from 'lucide-react';
 import { AreaTexto, Avatar, Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Panel, Selector, Tarjeta, Vacio } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,8 +32,16 @@ export default function Seguimiento() {
   const toast = useToast();
   const [doc, setDoc] = useState('');
   const [tipo, setTipo] = useState('');
-  const [form, setForm] = useState<{ abierto: boolean; seg?: TSeg }>({ abierto: false });
+  const [form, setForm] = useState<{ abierto: boolean; seg?: TSeg; docenteId?: string }>({ abierto: false });
   const [detalle, setDetalle] = useState<TSeg | null>(null);
+  const [params, setParams] = useSearchParams();
+  // Desde la ficha del docente: /seguimiento?nuevo=1&docente=ID abre el formulario con el docente elegido.
+  useEffect(() => {
+    if (params.get('nuevo') && puede) {
+      setForm({ abierto: true, docenteId: params.get('docente') ?? undefined });
+      setParams({}, { replace: true });
+    }
+  }, [params, puede, setParams]);
 
   const docs = porId(docentes);
   const visibles = (seguimientos ?? []).filter((s) => puede || (s.docente_id === perfil?.docente_id && s.estado === 'socializado'));
@@ -259,7 +268,7 @@ export default function Seguimiento() {
   );
 }
 
-function FormSeguimiento({ abierto, seg, onCerrar }: { abierto: boolean; seg?: TSeg; onCerrar: () => void }) {
+function FormSeguimiento({ abierto, seg, docenteId, onCerrar }: { abierto: boolean; seg?: TSeg; docenteId?: string; onCerrar: () => void }) {
   const { perfil } = useAuth();
   const ajustes = useAjustes();
   const { data: docentes = [] } = useTabla('docentes');
@@ -268,7 +277,7 @@ function FormSeguimiento({ abierto, seg, onCerrar }: { abierto: boolean; seg?: T
   const { crear, editar } = useMutar('seguimientos');
   const toast = useToast();
   const nuevo = (): Nuevo<TSeg> => ({
-    docente_id: '',
+    docente_id: docenteId ?? '',
     grupo_id: null,
     fecha: hoyISO(),
     tipo: 'visita_aula',
@@ -283,7 +292,7 @@ function FormSeguimiento({ abierto, seg, onCerrar }: { abierto: boolean; seg?: T
   const set = <K extends keyof typeof v>(k: K, val: (typeof v)[K]) => setV((x) => ({ ...x, [k]: val }));
   useEffect(() => {
     if (abierto) setV(seg ? { ...seg } : nuevo());
-  }, [abierto, seg]);
+  }, [abierto, seg, docenteId]);
 
   const guardar = async () => {
     if (!v.docente_id) return toast.error('Seleccione el docente.');
