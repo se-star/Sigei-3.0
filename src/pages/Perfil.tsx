@@ -16,6 +16,7 @@ export default function Perfil() {
   const { data: docentes = [] } = useTabla('docentes');
   if (!perfil) return null;
   const doc = docentes.find((d) => d.id === perfil.docente_id);
+  const esDocente = perfil.rol === 'docente' && !perfil.es_superadmin;
   const temas: { v: Tema; t: string; i: typeof Sun }[] = [
     { v: 'light', t: 'Claro', i: Sun },
     { v: 'dark', t: 'Oscuro', i: Moon },
@@ -68,29 +69,32 @@ export default function Perfil() {
             </Boton>
           </div>
         </Tarjeta>
-        <Tarjeta titulo="Mis instituciones" className="md:col-span-2">
-          {instituciones.length === 0 ? (
-            <p className="mb-4 text-sm text-muted">Aún no está vinculado a ninguna institución.</p>
-          ) : (
-            <ul className="mb-5 grid gap-2 sm:grid-cols-2">
-              {instituciones.map((i) => (
-                <li key={i.id} className="flex items-center justify-between gap-3 rounded-[20px] bg-surface-2 px-4 py-3">
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium">{i.nombre}</span>
-                    <span className="block text-xs text-muted">{i.activo ? etiqueta(ROLES, i.rol) : 'Solicitud pendiente'}</span>
-                  </span>
-                  {i.id === perfil.institucion_id ? <Insignia tono="lime">Actual</Insignia> : !i.activo && <Insignia tono="warn">Pendiente</Insignia>}
-                </li>
-              ))}
-            </ul>
-          )}
-          {!perfil.es_superadmin && (
-            <>
-              <p className="mb-2 text-sm font-medium">¿Trabaja en otra institución?</p>
-              <SolicitarAcceso />
-            </>
-          )}
-        </Tarjeta>
+        {/* Los docentes no gestionan instituciones: las vinculaciones las hace la coordinación. */}
+        {!esDocente && (
+          <Tarjeta titulo="Mis instituciones" className="md:col-span-2">
+            {instituciones.length === 0 ? (
+              <p className="mb-4 text-sm text-muted">Aún no está vinculado a ninguna institución.</p>
+            ) : (
+              <ul className="mb-5 grid gap-2 sm:grid-cols-2">
+                {instituciones.map((i) => (
+                  <li key={i.id} className="flex items-center justify-between gap-3 rounded-[20px] bg-surface-2 px-4 py-3">
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{i.nombre}</span>
+                      <span className="block text-xs text-muted">{i.activo ? etiqueta(ROLES, i.rol) : 'Solicitud pendiente'}</span>
+                    </span>
+                    {i.id === perfil.institucion_id ? <Insignia tono="lime">Actual</Insignia> : !i.activo && <Insignia tono="warn">Pendiente</Insignia>}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!perfil.es_superadmin && (
+              <>
+                <p className="mb-2 text-sm font-medium">¿Trabaja en otra institución?</p>
+                <SolicitarAcceso />
+              </>
+            )}
+          </Tarjeta>
+        )}
         {!modoDemo && (
           <Tarjeta titulo="Cambiar contraseña" className="md:col-start-1">
             <FormClave />
