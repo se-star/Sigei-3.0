@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, ArrowDown, ArrowUp, Check, Coffee, DatabaseBackup, Download, Plus, RotateCcw, Save, Trash2, Upload } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, BookOpenCheck, Check, Coffee, DatabaseBackup, Download, Plus, RotateCcw, Save, Trash2, Upload } from 'lucide-react';
+import { PlanEstudiosMEN } from '@/components/PlanEstudiosMEN';
 import { Boton, Campo, Encabezado, Entrada, Segmentos, Tarjeta } from '@/components/ui';
 import { useAjustes, useMutar, useTabla } from '@/hooks/useDatos';
 import { useAuth } from '@/hooks/useAuth';
@@ -168,6 +169,7 @@ function Areas() {
   const toast = useToast();
   const [nuevaArea, setNuevaArea] = useState('');
   const [nuevas, setNuevas] = useState<Record<string, string>>({});
+  const [plan, setPlan] = useState(false);
 
   const correr = async (fn: () => Promise<unknown>, ok?: string) => {
     try {
@@ -181,6 +183,21 @@ function Areas() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand-soft-ink">
+          <BookOpenCheck className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">Plan de estudios del MEN</p>
+          <p className="text-sm text-muted">
+            Agregue en pocos clics las áreas obligatorias de la Ley 115 de 1994 y sus asignaturas más comunes, las dimensiones de preescolar y las cátedras de ley.
+          </p>
+        </div>
+        <Boton onClick={() => setPlan(true)} className="sm:shrink-0">
+          Elegir asignaturas
+        </Boton>
+      </div>
+      <PlanEstudiosMEN abierto={plan} onCerrar={() => setPlan(false)} />
       <form
         className="card flex flex-col gap-2 p-4 sm:flex-row"
         onSubmit={(e) => {
