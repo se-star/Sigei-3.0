@@ -160,7 +160,7 @@ export function Shell() {
         </div>
       )}
 
-      <div className={cx('transition-[padding] duration-300', colapsado ? 'lg:pl-16' : 'lg:pl-[264px]')}>
+      <div className={cx('transition-[padding] duration-300 print:!pl-0', colapsado ? 'lg:pl-16' : 'lg:pl-[264px]')}>
         <header className="no-print sticky top-0 z-30 bg-bg/80 backdrop-blur-md">
           <div className="mx-auto flex h-[72px] max-w-[1200px] items-center gap-3 px-4 sm:px-6 lg:px-10">
             <button
@@ -184,7 +184,7 @@ export function Shell() {
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-[1200px] px-4 pt-4 pb-16 sm:px-6 lg:px-10">
+        <main className="mx-auto max-w-[1200px] px-4 pt-4 pb-16 sm:px-6 lg:px-10 print:max-w-none print:!px-0 print:!pt-0 print:!pb-0">
           <Outlet />
         </main>
       </div>
