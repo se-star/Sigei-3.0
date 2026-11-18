@@ -9,8 +9,26 @@ export interface OpcionMenu {
   onClick: () => void;
 }
 
-/** Botón «⋯» que despliega un menú de acciones. */
-export function MenuMas({ opciones, etiqueta = 'Más opciones', className }: { opciones: OpcionMenu[]; etiqueta?: string; className?: string }) {
+/** Botón «⋯» (u otro contenido) que despliega un menú de acciones. */
+export function MenuMas({
+  opciones,
+  etiqueta = 'Más opciones',
+  className,
+  disparador,
+  claseDisparador,
+  titulo,
+  alinear = 'derecha',
+}: {
+  opciones: OpcionMenu[];
+  etiqueta?: string;
+  className?: string;
+  /** Contenido del botón en lugar del ícono «⋯». */
+  disparador?: ReactNode;
+  claseDisparador?: string;
+  /** Encabezado opcional dentro del menú. */
+  titulo?: ReactNode;
+  alinear?: 'izquierda' | 'derecha';
+}) {
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
   const boton = useRef<HTMLButtonElement>(null);
@@ -50,19 +68,30 @@ export function MenuMas({ opciones, etiqueta = 'Más opciones', className }: { o
         ref={boton}
         type="button"
         aria-label={etiqueta}
-        title={etiqueta}
+        title={disparador ? undefined : etiqueta}
         aria-haspopup="menu"
         aria-expanded={abierto}
         onClick={() => setAbierto((a) => !a)}
-        className={cx(
-          'grid size-10 place-items-center rounded-full border border-line bg-surface text-ink shadow-chip transition hover:border-line-strong',
-          abierto && 'border-line-strong',
-        )}
+        className={
+          claseDisparador ??
+          cx(
+            'grid size-10 place-items-center rounded-full border border-line bg-surface text-ink shadow-chip transition hover:border-line-strong',
+            abierto && 'border-line-strong',
+          )
+        }
       >
-        <MoreHorizontal className="size-5" />
+        {disparador ?? <MoreHorizontal className="size-5" />}
       </button>
       {abierto && (
-        <div role="menu" aria-label={etiqueta} className="anim-fade absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-[20px] border border-line bg-surface p-1.5 shadow-pop">
+        <div
+          role="menu"
+          aria-label={etiqueta}
+          className={cx(
+            'anim-fade absolute z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-[20px] border border-line bg-surface p-1.5 shadow-pop',
+            alinear === 'derecha' ? 'right-0' : 'left-0',
+          )}
+        >
+          {titulo && <div className="px-3 pt-2 pb-1.5 text-xs text-muted">{titulo}</div>}
           {opciones.map((o) => (
             <button
               key={o.texto}

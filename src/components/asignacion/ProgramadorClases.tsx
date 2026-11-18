@@ -19,7 +19,7 @@ interface Marca {
  * asignatura, se marcan las franjas en la cuadrícula y se guarda. La pantalla
  * queda abierta para seguir con otra asignatura o grupo.
  */
-export function ProgramadorClases({ inicial }: { inicial?: { docente?: ID; grupo?: ID } }) {
+export function ProgramadorClases({ inicial }: { inicial?: { docente?: ID; grupo?: ID; asignatura?: ID } }) {
   const ajustes = useAjustes();
   const { data: horarios = [] } = useTabla('horarios');
   const { data: asignaciones = [] } = useTabla('asignaciones');
@@ -35,7 +35,7 @@ export function ProgramadorClases({ inicial }: { inicial?: { docente?: ID; grupo
 
   const [docente, setDocente] = useState<ID>(inicial?.docente ?? '');
   const [grupo, setGrupo] = useState<ID>(inicial?.grupo ?? '');
-  const [asignatura, setAsignatura] = useState<ID>('');
+  const [asignatura, setAsignatura] = useState<ID>(inicial?.asignatura ?? '');
   const [aula, setAula] = useState('');
   const [nuevas, setNuevas] = useState<Marca[]>([]);
   const [quitar, setQuitar] = useState<ID[]>([]);
@@ -47,7 +47,7 @@ export function ProgramadorClases({ inicial }: { inicial?: { docente?: ID; grupo
     if (!inicial) return;
     if (inicial.docente) setDocente(inicial.docente);
     if (inicial.grupo) setGrupo(inicial.grupo);
-    setAsignatura('');
+    setAsignatura(inicial.asignatura ?? '');
   }, [inicial]);
 
   const asg = porId(asignaturas);
