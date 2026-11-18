@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, BookOpenCheck, Download, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, BookOpenCheck, CalendarRange, Download, ListPlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Avatar, Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Progreso, Segmentos, Selector, Tarjeta, Vacio } from '@/components/ui';
 import { Buscador } from '@/components/ui/Buscador';
+import { MenuMas } from '@/components/ui/MenuMas';
+import { ProgramadorClases } from '@/components/asignacion/ProgramadorClases';
 import { useAuth } from '@/hooks/useAuth';
 import { useMutar, useTabla } from '@/hooks/useDatos';
 import { useConfirmar } from '@/hooks/useConfirmar';
@@ -10,7 +12,7 @@ import { useToast } from '@/hooks/useToast';
 import type { Asignacion as TAsignacion, ID } from '@/lib/types';
 import { coincide, cx, descargarCSV, duracionHoras, nombreDocente, nombreGrupo, porId } from '@/lib/utils';
 
-type Vista = 'docentes' | 'grupos';
+type Vista = 'programar' | 'docentes' | 'grupos';
 
 export default function Asignacion() {
   const { editar } = useAuth();
@@ -29,12 +31,19 @@ export default function Asignacion() {
   const [q, setQ] = useState('');
   const [grupoSel, setGrupoSel] = useState('');
   const [form, setForm] = useState<{ abierto: boolean; asig?: TAsignacion; docente_id?: ID; grupo_id?: ID }>({ abierto: false });
+  const [inicialProg, setInicialProg] = useState<{ docente?: ID; grupo?: ID }>();
   const [params, setParams] = useSearchParams();
-  // Desde la ficha del docente: /asignacion?docente=ID abre «Asignar» con ese docente.
+  /** Abre el programador de clases sobre el horario, con el docente o el grupo ya elegido. */
+  const programar = (inicial?: { docente?: ID; grupo?: ID }) => {
+    if (inicial) setInicialProg({ ...inicial });
+    setVista('programar');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  // Desde la ficha del docente: /asignacion?docente=ID abre el programador con ese docente.
   useEffect(() => {
     const d = params.get('docente');
     if (d && puede) {
-      setForm({ abierto: true, docente_id: d });
+      programar({ docente: d });
       setParams({}, { replace: true });
     }
   }, [params, puede, setParams]);
@@ -140,12 +149,29 @@ export default function Asignacion() {
         descripcion={`${lista.length} asignaciones · ${totalHoras} horas semanales${sobrecargados ? ` · ${sobrecargados} docentes sobre su carga máxima` : ''}`}
         acciones={
           <>
-            <Boton variante="secundario" icono={<Download className="size-4" />} onClick={exportar} disabled={!lista.length}>
-              Exportar
-            </Boton>
-            {puede && (
-              <Boton icono={<Plus className="size-4" />} onClick={() => setForm({ abierto: true })}>
-                Asignar
+            {puede && vista !== 'programar' && (
+              <Boton icono={<CalendarRange className="size-4" />} onClick={() => programar()}>
+                Programar clases
+              </Boton>
+            )}
+            {puede ? (
+              <MenuMas
+                etiqueta="Más opciones de asignación"
+                opciones={[
+                  {
+                    texto: 'Asignar sin horario',
+                    descripcion: 'Solo docente, asignatura, grupos y horas semanales',
+                    icono: <ListPlus className="size-4" />,
+                    onClick: () => setForm({ abierto: true }),
+                  },
+                  ...(lista.length
+                    ? [{ texto: 'Exportar asignación', descripcion: 'Archivo CSV para Excel', icono: <Download className="size-4" />, onClick: exportar }]
+                    : []),
+                ]}
+              />
+            ) : (
+              <Boton variante="secundario" icono={<Download className="size-4" />} onClick={exportar} disabled={!lista.length}>
+                Exportar
               </Boton>
             )}
           </>
@@ -157,11 +183,12 @@ export default function Asignacion() {
           valor={vista}
           onCambio={setVista}
           opciones={[
+            ...(puede ? [{ valor: 'programar' as const, etiqueta: 'Programar clases' }] : []),
             { valor: 'docentes', etiqueta: 'Por docente' },
             { valor: 'grupos', etiqueta: 'Por grupo' },
           ]}
         />
-        {vista === 'docentes' ? (
+        {vista === 'programar' ? null : vista === 'docentes' ? (
           <Buscador valor={q} onCambio={setQ} placeholder="Buscar docente o asignatura" className="sm:ml-auto sm:w-72" />
         ) : (
           <Selector value={grupoSel} onChange={(e) => setGrupoSel(e.target.value)} className="sm:ml-auto sm:w-64" aria-label="Grupo">
@@ -176,6 +203,8 @@ export default function Asignacion() {
 
       {isLoading ? (
         <Cargando />
+      ) : vista === 'programar' ? (
+        <ProgramadorClases inicial={inicialProg} />
       ) : vista === 'docentes' ? (
         porDocente.length === 0 ? (
           <div className="card">
@@ -213,7 +242,7 @@ export default function Asignacion() {
                   )}
                   {puede && (
                     <button
-                      onClick={() => setForm({ abierto: true, docente_id: d.id })}
+                      onClick={() => programar({ docente: d.id })}
                       className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-line py-2 text-xs font-semibold text-muted transition hover:border-brand hover:text-brand"
                     >
                       <Plus className="size-3.5" /> Agregar asignatura
@@ -235,13 +264,13 @@ export default function Asignacion() {
             <Vacio
               titulo="Este grupo no tiene asignaturas"
               texto="Asigne docentes y asignaturas para construir su plan de estudios."
-              accion={puede && <Boton onClick={() => setForm({ abierto: true, grupo_id: grupoSel })}>Asignar al grupo</Boton>}
+              accion={puede && <Boton onClick={() => programar({ grupo: grupoSel })}>Programar clases del grupo</Boton>}
             />
           ) : (
             <>
               <ul className="divide-y divide-line">{delGrupo.map((a) => filaAsig(a, 'docente'))}</ul>
               {puede && (
-                <Boton variante="secundario" tam="sm" className="mt-4" icono={<Plus className="size-3.5" />} onClick={() => setForm({ abierto: true, grupo_id: grupoSel })}>
+                <Boton variante="secundario" tam="sm" className="mt-4" icono={<Plus className="size-3.5" />} onClick={() => programar({ grupo: grupoSel })}>
                   Agregar asignatura
                 </Boton>
               )}
