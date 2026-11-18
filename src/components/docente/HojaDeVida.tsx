@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FileText, GraduationCap, Pencil, Plus, Trash2, Upload, BriefcaseBusiness } from 'lucide-react';
+import { FileText, GraduationCap, Pencil, Phone, Plus, Trash2, Upload, BriefcaseBusiness } from 'lucide-react';
 import { AreaTexto, Boton, Campo, Entrada, Modal, Selector, Tarjeta, Vacio } from '@/components/ui';
 import { useAbrirSoporte } from '@/components/Soportes';
 import { backend } from '@/lib/backend';
@@ -531,5 +531,41 @@ function SubirDocumento({ d, abierto, onCerrar }: { d: Docente; abierto: boolean
         </Campo>
       </div>
     </Modal>
+  );
+}
+
+/* ───────── Contacto ───────── */
+
+/** Teléfono de contacto, que el propio docente puede mantener al día. */
+export function TarjetaContacto({ d }: { d: Docente }) {
+  const { editar } = useMutar('docentes');
+  const toast = useToast();
+  const [telefono, setTelefono] = useState(d.telefono);
+  useEffect(() => setTelefono(d.telefono), [d.telefono]);
+  const cambiado = telefono.trim() !== d.telefono;
+  const guardar = async () => {
+    const t = telefono.trim();
+    if (t && !/^[+\d][\d\s()-]{6,19}$/.test(t)) return toast.error('Escriba un teléfono válido, solo con números.');
+    try {
+      await editar.mutateAsync({ id: d.id, cambios: { telefono: t } });
+      toast.ok('Teléfono actualizado.');
+    } catch (e) {
+      toast.error(e);
+    }
+  };
+  return (
+    <Tarjeta titulo="Contacto" icono={<Phone className="size-4" />}>
+      <form className="flex flex-col gap-3 py-1" onSubmit={(e) => (e.preventDefault(), guardar())}>
+        <Campo etiqueta="Teléfono celular" ayuda="La coordinación lo usa para comunicarse con usted.">
+          {(id) => <Entrada id={id} type="tel" inputMode="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="300 123 4567" />}
+        </Campo>
+        <p className="text-sm text-muted">
+          Correo: <span className="font-medium text-ink-2">{d.email || 'sin registrar'}</span>. Para cambiarlo, hable con la coordinación.
+        </p>
+        <Boton type="submit" tam="sm" className="self-start" disabled={!cambiado} cargando={editar.isPending}>
+          Guardar teléfono
+        </Boton>
+      </form>
+    </Tarjeta>
   );
 }

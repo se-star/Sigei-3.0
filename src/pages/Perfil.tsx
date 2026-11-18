@@ -1,8 +1,10 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Bell, Clock3, LogOut, Monitor, Moon, Sun, UserRound } from 'lucide-react';
 import { Avatar, Boton, Encabezado, Insignia, Tarjeta } from '@/components/ui';
 import { FormClave } from '@/components/formularios/FormClave';
 import { SolicitarAcceso } from '@/components/SolicitarAcceso';
+import { TarjetaContacto, TarjetaDocumentos, TarjetaExperiencia, TarjetaFormacion } from '@/components/docente/HojaDeVida';
 import { useAuth } from '@/hooks/useAuth';
 import { useTema, type Tema } from '@/hooks/useTema';
 import { useTabla } from '@/hooks/useDatos';
@@ -13,6 +15,12 @@ import { cx, nombreDocente } from '@/lib/utils';
 export default function Perfil() {
   const { perfil, instituciones, salir, ver } = useAuth();
   const { tema, setTema } = useTema();
+  const { hash } = useLocation();
+  const { data: cargados } = useTabla('docentes');
+  // Desde «Mi hoja de vida» en Inicio se llega directo a esa sección.
+  useEffect(() => {
+    if (hash === '#hoja-de-vida' && cargados) document.getElementById('hoja-de-vida')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [hash, cargados]);
   const { data: docentes = [] } = useTabla('docentes');
   if (!perfil) return null;
   const doc = docentes.find((d) => d.id === perfil.docente_id);
@@ -99,6 +107,22 @@ export default function Perfil() {
           <Tarjeta titulo="Cambiar contraseña" className="md:col-start-1">
             <FormClave />
           </Tarjeta>
+        )}
+        {doc && (
+          <section id="hoja-de-vida" className="flex scroll-mt-24 flex-col gap-4 md:col-span-2">
+            <div>
+              <h2 className="text-[22px] font-semibold">Mi hoja de vida</h2>
+              <p className="mt-1 text-sm text-muted">
+                Mantenga al día sus títulos, su experiencia y sus documentos. La coordinación de {instituciones.find((i) => i.id === perfil.institucion_id)?.nombre ?? 'su institución'} los ve en su ficha.
+              </p>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <TarjetaFormacion d={doc} puede />
+              <TarjetaExperiencia d={doc} puede />
+              <TarjetaDocumentos d={doc} puede />
+              <TarjetaContacto d={doc} />
+            </div>
+          </section>
         )}
         <Tarjeta titulo="Apariencia" className="md:col-start-2 md:row-start-1">
           <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Tema">

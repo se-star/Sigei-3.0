@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, CalendarDays, ChevronRight, Clock3, ListTodo, Megaphone, Paperclip, Pin, Plus, School, UserRoundX } from 'lucide-react';
+import { Bell, CalendarDays, ChevronRight, Clock3, GraduationCap, ListTodo, Megaphone, Paperclip, Pin, Plus, School, UserRoundX } from 'lucide-react';
 import { useMisGrupos } from './MiGrupo';
 import { Insignia, Tarjeta, Vacio } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
@@ -48,6 +48,9 @@ export default function InicioDocente() {
   const { data: eventos = [] } = useTabla('eventos');
   const { data: comunicados = [] } = useTabla('comunicados');
   const { data: tareas = [] } = useTabla('tareas');
+  const { data: docentes = [] } = useTabla('docentes');
+  const yo = docentes.find((d) => d.id === perfil?.docente_id);
+  const hojaVacia = !!yo && !(yo.formacion ?? []).length;
 
   const hoy = hoyISO();
   const asg = porId(asignaturas);
@@ -83,6 +86,7 @@ export default function InicioDocente() {
     ...(misGrupos.length ? [{ to: '/mi-grupo', texto: `Mi grupo ${misGrupos[0].nombre}`, icono: School }] : []),
     { to: '/calendario', texto: 'Actividades', icono: CalendarDays },
     { to: '/comunicados', texto: 'Comunicados', icono: Megaphone },
+    ...(yo ? [{ to: '/perfil#hoja-de-vida', texto: 'Mi hoja de vida', icono: GraduationCap }] : []),
   ];
 
   return (
@@ -111,6 +115,19 @@ export default function InicioDocente() {
           ))}
         </nav>
       </section>
+
+      {hojaVacia && (
+        <Link to="/perfil#hoja-de-vida" className="card flex items-center gap-4 p-5 transition hover:shadow-pop">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand-soft-ink">
+            <GraduationCap className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Complete su hoja de vida</span>
+            <span className="block text-sm text-muted">Agregue sus títulos, su experiencia y sus documentos. Toma unos minutos.</span>
+          </span>
+          <ChevronRight className="size-5 text-muted" />
+        </Link>
+      )}
 
       {!perfil?.docente_id && (
         <div className="card">
