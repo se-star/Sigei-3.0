@@ -3,15 +3,17 @@ import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, CalendarPlus, CheckCircle2, Clock3, Printer, Trash2, UserRoundX } from 'lucide-react';
 import { Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Segmentos, Selector, Tarjeta, Vacio } from '@/components/ui';
 import { HorarioSemanal } from '@/components/HorarioSemanal';
+import { HorarioGeneral } from '@/components/HorarioGeneral';
 import { useAuth } from '@/hooks/useAuth';
 import { useAjustes, useMutar, useTabla } from '@/hooks/useDatos';
 import { useConfirmar } from '@/hooks/useConfirmar';
 import { useToast } from '@/hooks/useToast';
-import { DIAS } from '@/lib/catalogos';
-import type { BloqueHorario, Dia, Nuevo } from '@/lib/types';
+import { DIAS, NIVELES } from '@/lib/catalogos';
+import type { BloqueHorario, Dia, Nivel, Nuevo } from '@/lib/types';
 import { aISO, choquesDe, cx, descargarArchivo, duracionHoras, nombreDocente, nombreGrupo, porId } from '@/lib/utils';
 
-type Modo = 'grupo' | 'docente';
+type Modo = 'general' | 'grupo' | 'docente';
+type ColumnasGeneral = 'grupos' | 'docentes';
 
 export default function Horarios() {
   const { perfil } = useAuth();
@@ -30,9 +32,15 @@ function HorariosGestion() {
   const { data: docentes = [] } = useTabla('docentes');
   const { data: asignaturas = [] } = useTabla('asignaturas');
   const { data: areas = [] } = useTabla('areas');
+  const { data: sedes = [] } = useTabla('sedes');
 
   const inicialDoc = params.get('mio') && perfil?.docente_id ? perfil.docente_id : params.get('docente');
-  const [modo, setModo] = useState<Modo>(inicialDoc ? 'docente' : 'grupo');
+  const [modo, setModo] = useState<Modo>(inicialDoc ? 'docente' : params.get('grupo') ? 'grupo' : 'general');
+  // Vista institucional: filtros
+  const [columnasGen, setColumnasGen] = useState<ColumnasGeneral>('grupos');
+  const [sedeGen, setSedeGen] = useState('');
+  const [nivelGen, setNivelGen] = useState<Nivel | ''>('');
+  const [diaGen, setDiaGen] = useState<'semana' | `${Dia}`>('semana');
   const [grupoSel, setGrupoSel] = useState(params.get('grupo') ?? '');
   const [docSel, setDocSel] = useState(inicialDoc ?? '');
   const [form, setForm] = useState<{ abierto: boolean; bloque?: BloqueHorario; base?: Partial<BloqueHorario> }>({ abierto: false });
@@ -59,7 +67,7 @@ function HorariosGestion() {
   const ars = porId(areas);
   const grs = porId(grupos);
   const docs = porId(docentes);
-  const bloques = todos.filter((h) => (modo === 'grupo' ? h.grupo_id === grupoSel : h.docente_id === docSel));
+  const bloques = todos.filter((h) => (modo === 'grupo' ? h.grupo_id === grupoSel : modo === 'docente' ? h.docente_id === docSel : true));
   const horasSemana = bloques.reduce((s, b) => s + duracionHoras(b.hora_inicio, b.hora_fin), 0);
 
   const choquesInst = useMemo(() => {
@@ -78,6 +86,32 @@ function HorariosGestion() {
   const titulo =
     modo === 'grupo' ? `Grupo ${nombreGrupo(grs.get(grupoSel), grados)}` : nombreDocente(docs.get(docSel));
 
+  // ── Vista institucional ──
+  const gruposGen = listaGrupos.filter(
+    (g) => (!sedeGen || g.sede_id === sedeGen) && (!nivelGen || ord.get(g.grado_id)?.nivel === nivelGen),
+  );
+  const idsGruposGen = new Set(gruposGen.map((g) => g.id));
+  const bloquesGen = todos.filter((h) => idsGruposGen.has(h.grupo_id));
+  const docentesGen = activos.filter((d) => bloquesGen.some((h) => h.docente_id === d.id));
+  const columnas =
+    columnasGen === 'grupos'
+      ? gruposGen.map((g) => ({ id: g.id, titulo: g.nombre, subtitulo: ord.get(g.grado_id)?.nombre }))
+      : docentesGen.map((d) => ({ id: d.id, titulo: nombreDocente(d, true), subtitulo: ars.get(d.area_id ?? '')?.nombre }));
+  const conSabado = todos.some((h) => h.dia === 6);
+  const diasGen: Dia[] = diaGen === 'semana' ? (DIAS.filter((x) => x.valor <= (conSabado ? 6 : 5)).map((x) => x.valor) as Dia[]) : [Number(diaGen) as Dia];
+  const sinDocente = bloquesGen.filter((h) => !h.docente_id).length;
+  const choquesGen = choquesInst.filter(({ a, b }) => idsGruposGen.has(a.grupo_id) || idsGruposGen.has(b.grupo_id)).length;
+  const verColumna = (id: string) => {
+    if (columnasGen === 'grupos') {
+      setGrupoSel(id);
+      setModo('grupo');
+    } else {
+      setDocSel(id);
+      setModo('docente');
+    }
+    window.scrollTo({ top: 0 });
+  };
+
   const cambiarModo = (m: Modo) => {
     setModo(m);
     setParams({}, { replace: true });
@@ -94,17 +128,52 @@ function HorariosGestion() {
           </Boton>
         }
       />
+      {modo === 'general' && <style>{'@media print { @page { size: landscape; margin: 8mm; } }'}</style>}
 
       <div className="no-print mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
         <Segmentos<Modo>
           valor={modo}
           onCambio={cambiarModo}
           opciones={[
+            { valor: 'general', etiqueta: 'Institucional' },
             { valor: 'grupo', etiqueta: 'Por grupo' },
             { valor: 'docente', etiqueta: 'Por docente' },
           ]}
         />
-        {modo === 'grupo' ? (
+        {modo === 'general' ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Selector value={columnasGen} onChange={(e) => setColumnasGen(e.target.value as ColumnasGeneral)} className="w-auto" aria-label="Columnas">
+              <option value="grupos">Columnas: grupos</option>
+              <option value="docentes">Columnas: docentes</option>
+            </Selector>
+            {sedes.length > 1 && (
+              <Selector value={sedeGen} onChange={(e) => setSedeGen(e.target.value)} className="w-auto" aria-label="Sede">
+                <option value="">Todas las sedes</option>
+                {sedes.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.nombre}
+                  </option>
+                ))}
+              </Selector>
+            )}
+            <Selector value={nivelGen} onChange={(e) => setNivelGen(e.target.value as Nivel | '')} className="w-auto" aria-label="Nivel">
+              <option value="">Todos los niveles</option>
+              {NIVELES.filter((n) => grados.some((g) => g.nivel === n.valor)).map((n) => (
+                <option key={n.valor} value={n.valor}>
+                  {n.etiqueta}
+                </option>
+              ))}
+            </Selector>
+            <Selector value={diaGen} onChange={(e) => setDiaGen(e.target.value as typeof diaGen)} className="w-auto" aria-label="Día">
+              <option value="semana">Toda la semana</option>
+              {DIAS.filter((x) => x.valor <= (conSabado ? 6 : 5)).map((x) => (
+                <option key={x.valor} value={x.valor}>
+                  {x.largo}
+                </option>
+              ))}
+            </Selector>
+          </div>
+        ) : modo === 'grupo' ? (
           <Selector value={grupoSel} onChange={(e) => setGrupoSel(e.target.value)} className="sm:w-64" aria-label="Grupo">
             {listaGrupos.map((g) => (
               <option key={g.id} value={g.id}>
@@ -121,14 +190,94 @@ function HorariosGestion() {
             ))}
           </Selector>
         )}
-        <div className="flex items-center gap-2 text-sm text-muted sm:ml-auto">
-          <Clock3 className="size-4" />
-          <span className="tabular-nums">{Math.round(horasSemana * 10) / 10} h semanales</span>
-        </div>
+        {modo !== 'general' && (
+          <div className="flex items-center gap-2 text-sm text-muted sm:ml-auto">
+            <Clock3 className="size-4" />
+            <span className="tabular-nums">{Math.round(horasSemana * 10) / 10} h semanales</span>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
         <Cargando />
+      ) : modo === 'general' ? (
+        !ajustes.franjas.length ? (
+          <div className="card">
+            <Vacio titulo="Configure las franjas horarias" texto="Defina las horas de clase en Configuración para construir el horario." />
+          </div>
+        ) : !columnas.length ? (
+          <div className="card">
+            <Vacio
+              titulo={columnasGen === 'grupos' ? 'No hay grupos con estos filtros' : 'Ningún docente tiene clases con estos filtros'}
+              texto="Cambie la sede o el nivel."
+            />
+          </div>
+        ) : (
+          <section className="card p-4 sm:p-5 print:p-0 print:shadow-none">
+            <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+              <h2 className="text-[17px] font-semibold">
+                Horario general
+                <span className="font-normal text-muted">
+                  {sedeGen ? ` · ${sedes.find((x) => x.id === sedeGen)?.nombre}` : ''}
+                  {nivelGen ? ` · ${NIVELES.find((n) => n.valor === nivelGen)?.etiqueta}` : ''}
+                  {diaGen !== 'semana' ? ` · ${DIAS.find((x) => String(x.valor) === diaGen)?.largo}` : ''}
+                </span>
+              </h2>
+              <span className="text-muted tabular-nums">
+                {gruposGen.length} {gruposGen.length === 1 ? 'grupo' : 'grupos'} ·{' '}
+                {diaGen === 'semana'
+                  ? `${bloquesGen.length} clases a la semana`
+                  : `${bloquesGen.filter((h) => String(h.dia) === diaGen).length} clases el ${DIAS.find((x) => String(x.valor) === diaGen)?.largo.toLowerCase()}`}
+              </span>
+              {sinDocente > 0 && <Insignia tono="warn">{sinDocente} sin docente</Insignia>}
+              {choquesGen > 0 ? (
+                <Insignia tono="danger">
+                  {choquesGen} {choquesGen === 1 ? 'choque' : 'choques'}
+                </Insignia>
+              ) : (
+                <Insignia tono="ok">Sin choques</Insignia>
+              )}
+              <span className="no-print text-xs text-muted sm:ml-auto">Toque un {columnasGen === 'grupos' ? 'grupo' : 'docente'} para ver su horario.</span>
+            </div>
+            <HorarioGeneral
+              bloques={bloquesGen}
+              franjas={ajustes.franjas}
+              dias={diasGen}
+              columnas={columnas}
+              porColumna={(b) => (columnasGen === 'grupos' ? b.grupo_id : b.docente_id)}
+              color={(b) => ars.get(asg.get(b.asignatura_id)?.area_id ?? '')?.color}
+              linea1={(b) => asg.get(b.asignatura_id)?.nombre ?? '—'}
+              linea2={(b) =>
+                columnasGen === 'grupos'
+                  ? b.docente_id
+                    ? nombreDocente(docs.get(b.docente_id), true)
+                    : 'Sin docente'
+                  : `${grs.get(b.grupo_id)?.nombre ?? ''}${b.aula ? ` · ${b.aula}` : ''}`
+              }
+              onColumna={verColumna}
+              onCelda={
+                puede
+                  ? (dia, f, col) =>
+                      setForm({
+                        abierto: true,
+                        base: { dia, hora_inicio: f.inicio, hora_fin: f.fin, ...(columnasGen === 'grupos' ? { grupo_id: col } : { docente_id: col }) },
+                      })
+                  : undefined
+              }
+              onBloque={puede ? (b) => setForm({ abierto: true, bloque: b }) : undefined}
+            />
+            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted">
+              {areas
+                .filter((a) => bloquesGen.some((h) => asg.get(h.asignatura_id)?.area_id === a.id))
+                .map((a) => (
+                  <li key={a.id} className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-sm" style={{ background: a.color }} />
+                    {a.nombre}
+                  </li>
+                ))}
+            </ul>
+          </section>
+        )
       ) : (
         <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
           <Tarjeta titulo={titulo}>
