@@ -1,15 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Download, LayoutGrid, List, Mail, Phone, Plus, UsersRound } from 'lucide-react';
+import { Download, FileSpreadsheet, LayoutGrid, List, Mail, Phone, Plus, Upload, UsersRound } from 'lucide-react';
 import { Avatar, Boton, Cargando, Encabezado, Insignia, Progreso, Selector, Vacio } from '@/components/ui';
 import { Buscador } from '@/components/ui/Buscador';
+import { MenuMas } from '@/components/ui/MenuMas';
+import { ImportarDocentes } from '@/components/docente/ImportarDocentes';
+import { useToast } from '@/hooks/useToast';
+import { descargarDocentes, descargarPlantilla } from '@/lib/docentesExcel';
 import { Tabla, type Columna } from '@/components/ui/Tabla';
 import { FormDocente } from '@/components/formularios/FormDocente';
 import { useAuth } from '@/hooks/useAuth';
 import { useMiembros, useTabla } from '@/hooks/useDatos';
 import { ESTADOS_DOCENTE, etiqueta, tono, VINCULACIONES } from '@/lib/catalogos';
 import type { Docente } from '@/lib/types';
-import { coincide, cx, descargarCSV, nombreDocente, porId } from '@/lib/utils';
+import { coincide, cx, nombreDocente, porId } from '@/lib/utils';
 
 export default function Docentes() {
   const { editar } = useAuth();
@@ -27,9 +31,10 @@ export default function Docentes() {
   const [sede, setSede] = useState('');
   const [vista, setVista] = useState<'tabla' | 'tarjetas'>(() => (localStorage.getItem('sigei.vista.docentes') as 'tabla') || 'tabla');
   const [form, setForm] = useState(false);
+  const [importar, setImportar] = useState(false);
+  const toast = useToast();
 
   const areasMap = porId(areas);
-  const sedesMap = porId(sedes);
   const carga = useMemo(() => {
     const m = new Map<string, number>();
     for (const a of asignaciones) m.set(a.docente_id, (m.get(a.docente_id) ?? 0) + a.horas_semanales);
@@ -55,25 +60,7 @@ export default function Docentes() {
     }
   };
 
-  const exportar = () =>
-    descargarCSV(
-      'docentes',
-      ['Documento', 'Nombres', 'Apellidos', 'Correo', 'Teléfono', 'Área', 'Sede', 'Cargo', 'Vinculación', 'Escalafón', 'Estado', 'Horas asignadas'],
-      filtrados.map((d) => [
-        d.documento,
-        d.nombres,
-        d.apellidos,
-        d.email,
-        d.telefono,
-        areasMap.get(d.area_id ?? '')?.nombre,
-        sedesMap.get(d.sede_id ?? '')?.nombre,
-        d.cargo,
-        etiqueta(VINCULACIONES, d.vinculacion),
-        d.escalafon,
-        etiqueta(ESTADOS_DOCENTE, d.estado),
-        carga.get(d.id) ?? 0,
-      ]),
-    );
+  const exportar = () => descargarDocentes(filtrados, { areas, sedes, horas: carga }).catch((e) => toast.error(e));
 
   const columnas: Columna<Docente>[] = [
     {
@@ -173,9 +160,37 @@ export default function Docentes() {
         descripcion="Directorio del equipo docente, con su vinculación y carga académica."
         acciones={
           <>
-            <Boton variante="secundario" icono={<Download className="size-4" />} onClick={exportar} disabled={!filtrados.length}>
-              Exportar
-            </Boton>
+            <MenuMas
+              etiqueta="Más opciones de docentes"
+              opciones={[
+                ...(filtrados.length
+                  ? [
+                      {
+                        texto: 'Descargar lista en Excel',
+                        descripcion: `${filtrados.length} ${filtrados.length === 1 ? 'docente' : 'docentes'} con los filtros actuales`,
+                        icono: <Download className="size-4" />,
+                        onClick: exportar,
+                      },
+                    ]
+                  : []),
+                ...(editar('docentes')
+                  ? [
+                      {
+                        texto: 'Importar desde Excel',
+                        descripcion: 'Cargar varios docentes de una vez',
+                        icono: <Upload className="size-4" />,
+                        onClick: () => setImportar(true),
+                      },
+                      {
+                        texto: 'Descargar plantilla de Excel',
+                        descripcion: 'Formato para llenar y luego importar',
+                        icono: <FileSpreadsheet className="size-4" />,
+                        onClick: () => descargarPlantilla(areas, sedes).catch((e) => toast.error(e)),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
             {editar('docentes') && (
               <Boton icono={<Plus className="size-4" />} onClick={() => setForm(true)}>
                 Nuevo docente
@@ -320,6 +335,7 @@ export default function Docentes() {
       )}
 
       <FormDocente abierto={form} onCerrar={() => setForm(false)} onGuardado={(d) => nav(`/docentes/${d.id}`)} />
+      <ImportarDocentes abierto={importar} onCerrar={() => setImportar(false)} />
     </>
   );
 }
