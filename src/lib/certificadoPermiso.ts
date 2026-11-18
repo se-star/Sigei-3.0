@@ -4,7 +4,9 @@
  * estándar del PDF, así que no depende de archivos externos.
  */
 import { DIAS } from './catalogos';
-import type { Franja, Novedad } from './types';
+import type { FilaCertificado, Franja, Novedad, PlantillaCertificado } from './types';
+
+export type { FilaCertificado, PlantillaCertificado };
 import { diasEntre } from './utils';
 
 /* ───────── Textos ───────── */
@@ -81,6 +83,108 @@ export interface DatosCertificado {
   solicitadoEn: string; // ISO
   autorizadoPor: { nombre: string; cargo: string };
   autorizadoEn: string; // ISO
+  /** Textos personalizados de la institución (Configuración → Certificado). */
+  plantilla?: Partial<PlantillaCertificado>;
+}
+
+/* ───────── Plantilla editable por institución ───────── */
+
+export const FILAS_CERTIFICADO: { clave: FilaCertificado; etiqueta: string }[] = [
+  { clave: 'docente', etiqueta: 'Docente' },
+  { clave: 'documento', etiqueta: 'Documento' },
+  { clave: 'correo', etiqueta: 'Correo' },
+  { clave: 'sede', etiqueta: 'Sede' },
+  { clave: 'tipo', etiqueta: 'Tipo de permiso' },
+  { clave: 'fechas', etiqueta: 'Fecha(s)' },
+  { clave: 'horario', etiqueta: 'Horario' },
+  { clave: 'motivo', etiqueta: 'Motivo' },
+  { clave: 'reemplazo', etiqueta: 'Reemplazo' },
+  { clave: 'soporte_previo', etiqueta: 'Soporte previo' },
+  { clave: 'soporte_posterior', etiqueta: 'Soporte posterior' },
+  { clave: 'observaciones', etiqueta: 'Observaciones' },
+];
+
+export const PLANTILLA_DEFECTO: PlantillaCertificado = {
+  titulo: 'CERTIFICADO DE AUTORIZACIÓN DE PERMISO',
+  encabezado: '{municipio} · {Dependencia}',
+  parrafo:
+    'La {dependencia} de **{INSTITUCION}** certifica que, una vez revisada la solicitud presentada por el/la docente **{DOCENTE}**, identificado(a) con documento No. **{documento}**, **AUTORIZÓ** el permiso que se detalla a continuación, en las condiciones aquí indicadas.',
+  filas: FILAS_CERTIFICADO.map((f) => f.clave),
+  nota: '',
+  cargo_firma: '',
+  pie: 'Documento generado por SIGEI TIC · Para verificarlo, la institución puede consultar el radicado {radicado}.',
+};
+
+/** Campos que se llenan solos en los textos de la plantilla. */
+export const VARIABLES_CERTIFICADO: { clave: string; descripcion: string }[] = [
+  { clave: 'institucion', descripcion: 'Nombre de la institución' },
+  { clave: 'municipio', descripcion: 'Municipio' },
+  { clave: 'dependencia', descripcion: 'rectoría o coordinación' },
+  { clave: 'docente', descripcion: 'Nombre del docente' },
+  { clave: 'documento', descripcion: 'Documento del docente' },
+  { clave: 'sede', descripcion: 'Sede del docente' },
+  { clave: 'tipo', descripcion: 'Tipo de permiso' },
+  { clave: 'fechas', descripcion: 'Fecha(s) del permiso' },
+  { clave: 'horario', descripcion: 'Jornada u horas' },
+  { clave: 'radicado', descripcion: 'Número de radicado' },
+  { clave: 'fecha_solicitud', descripcion: 'Fecha de la solicitud' },
+  { clave: 'fecha_autorizacion', descripcion: 'Fecha de autorización' },
+  { clave: 'autorizado_por', descripcion: 'Quien autorizó' },
+  { clave: 'cargo', descripcion: 'Cargo de quien autorizó' },
+];
+
+export function plantillaCompleta(p?: Partial<PlantillaCertificado> | null): PlantillaCertificado {
+  const limpio = Object.fromEntries(Object.entries(p ?? {}).filter(([, v]) => v !== undefined && v !== null)) as Partial<PlantillaCertificado>;
+  const r = { ...PLANTILLA_DEFECTO, ...limpio };
+  // Título y párrafo vacíos vuelven al texto de SIGEI.
+  if (!r.titulo.trim()) r.titulo = PLANTILLA_DEFECTO.titulo;
+  if (!r.parrafo.trim()) r.parrafo = PLANTILLA_DEFECTO.parrafo;
+  r.filas = Array.isArray(r.filas) ? FILAS_CERTIFICADO.map((f) => f.clave).filter((c) => r.filas.includes(c)) : PLANTILLA_DEFECTO.filas;
+  return r;
+}
+
+export function valoresCertificado(d: DatosCertificado): Record<string, string> {
+  return {
+    institucion: d.institucion.nombre,
+    municipio: d.institucion.municipio,
+    dependencia: d.institucion.dependencia.toLowerCase(),
+    docente: d.docente.nombre,
+    documento: d.docente.documento || '—',
+    correo: d.docente.correo,
+    sede: d.docente.sede,
+    tipo: d.tipo,
+    fechas: d.fechas,
+    horario: d.horario,
+    motivo: d.motivo,
+    reemplazo: d.reemplazo ?? '',
+    radicado: d.radicado,
+    fecha_solicitud: fechaLarga(d.solicitadoEn),
+    fecha_autorizacion: fechaLarga(d.autorizadoEn),
+    autorizado_por: d.autorizadoPor.nombre,
+    cargo: d.autorizadoPor.cargo,
+  };
+}
+
+/**
+ * Llena los campos de un texto: {docente} tal cual, {DOCENTE} en mayúsculas y
+ * {Docente} con la primera letra en mayúscula. Los que no existen se dejan igual.
+ */
+export function rellenar(texto: string, valores: Record<string, string>): string {
+  return texto.replace(/\{([A-Za-z_]+)\}/g, (todo, nombre: string) => {
+    const v = valores[nombre.toLowerCase()];
+    if (v === undefined) return todo;
+    if (nombre === nombre.toUpperCase()) return v.toUpperCase();
+    if (nombre[0] === nombre[0].toUpperCase()) return v.charAt(0).toUpperCase() + v.slice(1);
+    return v;
+  });
+}
+
+/** «texto **negrita** texto» → partes con su estilo. */
+export function partesNegrita(texto: string): [string, boolean][] {
+  return texto
+    .split(/(\*\*[^*]+\*\*)/)
+    .filter(Boolean)
+    .map((t): [string, boolean] => (t.startsWith('**') && t.endsWith('**') && t.length > 4 ? [t.slice(2, -2), true] : [t, false]));
 }
 
 /* ───────── PDF ───────── */
@@ -123,6 +227,8 @@ export async function generarCertificado(lib: PDFLib, d: DatosCertificado): Prom
   const negrita = await doc.embedFont(StandardFonts.HelveticaBold);
   const M = 56;
   const ancho = 612 - 2 * M;
+  const pl = plantillaCompleta(d.plantilla);
+  const valores = valoresCertificado(d);
   const color = (c: [number, number, number]) => rgb(c[0], c[1], c[2]);
   let y = 792 - 60;
 
@@ -165,87 +271,108 @@ export async function generarCertificado(lib: PDFLib, d: DatosCertificado): Prom
     }
   }
   texto(d.institucion.nombre.toUpperCase(), xTexto, y, { tam: 14, bold: true });
-  texto([d.institucion.municipio, d.institucion.dependencia].filter(Boolean).join(' · '), xTexto, y - 17, { tam: 9.5, c: GRIS });
+  const encabezado = rellenar(pl.encabezado, valores)
+    .split('·')
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .join(' · ');
+  if (encabezado) texto(encabezado, xTexto, y - 17, { tam: 9.5, c: GRIS });
   y -= 52;
   linea(y);
 
   // Título
   y -= 34;
-  centrado('CERTIFICADO DE AUTORIZACIÓN DE PERMISO', y, { tam: 15, bold: true, c: AZUL });
+  for (const [i, l] of partir(rellenar(pl.titulo, valores), 15, ancho, true).entries()) centrado(l, y - i * 19, { tam: 15, bold: true, c: AZUL });
+  y -= (partir(rellenar(pl.titulo, valores), 15, ancho, true).length - 1) * 19;
   y -= 18;
   centrado(`Radicado ${d.radicado} · Solicitud del ${fechaNumerica(d.solicitadoEn)}`, y, { tam: 9.5, c: GRIS });
 
-  // Párrafo con partes en negrita.
-  y -= 34;
-  const partes: [string, boolean][] = [
-    [`La ${d.institucion.dependencia.toLowerCase() || 'rectoría'} de`, false],
-    [d.institucion.nombre.toUpperCase(), true],
-    ['certifica que, una vez revisada la solicitud presentada por el/la docente', false],
-    [d.docente.nombre.toUpperCase(), true],
-    [`, identificado(a) con documento No.`, false],
-    [d.docente.documento || '—', true],
-    [',', false],
-    ['AUTORIZÓ', true],
-    ['el permiso que se detalla a continuación, en las condiciones aquí indicadas.', false],
-  ];
-  const palabras = partes.flatMap(([t, b]) => aWinAnsi(t).split(/\s+/).filter(Boolean).map((p) => ({ p, b })));
-  const tam = 10.5;
-  const interlinea = 16;
-  let fila: { p: string; b: boolean }[] = [];
-  const anchoFila = (f: typeof fila) => f.reduce((s, w, i) => s + medir(w.p, tam, w.b) + (i && !/^[,.]/.test(w.p) ? medir(' ', tam) : 0), 0);
-  const dibujarFila = (f: typeof fila, justificar: boolean) => {
-    const huecos = f.filter((w, i) => i && !/^[,.]/.test(w.p)).length;
-    const extra = justificar && huecos ? (ancho - anchoFila(f)) / huecos : 0;
-    let x = M;
-    f.forEach((w, i) => {
-      if (i && !/^[,.]/.test(w.p)) x += medir(' ', tam) + extra;
-      texto(w.p, x, y, { tam, bold: w.b });
-      x += medir(w.p, tam, w.b);
-    });
-    y -= interlinea;
-  };
-  for (const w of palabras) {
-    if (fila.length && anchoFila([...fila, w]) > ancho) {
-      dibujarFila(fila, true);
-      fila = [];
+  /** Párrafo con partes en negrita, justificado salvo la última línea. */
+  const parrafo = (fuente: string, tam = 10.5, interlinea = 16) => {
+    const palabras = partesNegrita(rellenar(fuente, valores)).flatMap(([t, b]) =>
+      aWinAnsi(t)
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((p) => ({ p, b })),
+    );
+    const pegada = (p: string) => /^[,.;:)]/.test(p);
+    let fila: { p: string; b: boolean }[] = [];
+    const anchoFila = (f: typeof fila) => f.reduce((s, w, i) => s + medir(w.p, tam, w.b) + (i && !pegada(w.p) ? medir(' ', tam) : 0), 0);
+    const dibujarFila = (f: typeof fila, justificar: boolean) => {
+      const huecos = f.filter((w, i) => i && !pegada(w.p)).length;
+      const extra = justificar && huecos ? (ancho - anchoFila(f)) / huecos : 0;
+      let x = M;
+      f.forEach((w, i) => {
+        if (i && !pegada(w.p)) x += medir(' ', tam) + extra;
+        texto(w.p, x, y, { tam, bold: w.b });
+        x += medir(w.p, tam, w.b);
+      });
+      y -= interlinea;
+    };
+    for (const w of palabras) {
+      if (fila.length && anchoFila([...fila, w]) > ancho) {
+        dibujarFila(fila, true);
+        fila = [];
+      }
+      fila.push(w);
     }
-    fila.push(w);
-  }
-  if (fila.length) dibujarFila(fila, false);
+    if (fila.length) dibujarFila(fila, false);
+  };
 
-  // Tabla de datos
-  y -= 14;
-  const filas: [string, string][] = [
-    ['Docente', d.docente.nombre.toUpperCase()],
-    ['Documento', d.docente.documento || '—'],
-    ['Correo', d.docente.correo || '—'],
-    ['Sede', d.docente.sede || '—'],
-    ['Tipo de permiso', d.tipo],
-    ['Fecha(s)', d.fechas],
-    ['Horario', d.horario],
-    ['Motivo', d.motivo || '—'],
-    ...(d.reemplazo ? ([['Reemplazo', d.reemplazo]] as [string, string][]) : []),
-    ['Soporte previo', d.soportePrevio],
-    ['Soporte posterior', d.soportePosterior],
-    ...(d.observacion ? ([['Observaciones', d.observacion]] as [string, string][]) : []),
-  ];
+  y -= 34;
+  for (const bloque of pl.parrafo.split(/\n\s*\n/)) {
+    parrafo(bloque);
+    y -= 6;
+  }
+
+  // Tabla de datos: solo las filas elegidas en la plantilla (y las que tienen contenido).
+  y -= 8;
+  const contenido: Record<FilaCertificado, string> = {
+    docente: d.docente.nombre.toUpperCase(),
+    documento: d.docente.documento || '—',
+    correo: d.docente.correo || '—',
+    sede: d.docente.sede || '—',
+    tipo: d.tipo,
+    fechas: d.fechas,
+    horario: d.horario,
+    motivo: d.motivo || '—',
+    reemplazo: d.reemplazo ?? '',
+    soporte_previo: d.soportePrevio,
+    soporte_posterior: d.soportePosterior,
+    observaciones: d.observacion ?? '',
+  };
+  const opcionales: FilaCertificado[] = ['reemplazo', 'observaciones'];
+  const filas: [string, string][] = FILAS_CERTIFICADO.filter((f) => pl.filas.includes(f.clave) && (!opcionales.includes(f.clave) || contenido[f.clave])).map((f) => [
+    f.etiqueta,
+    contenido[f.clave],
+  ]);
   const col = 150;
   const tamT = 10;
   const pad = 8;
-  const arriba = y;
-  for (const [etq, valor] of filas) {
-    const lineas = partir(valor, tamT, ancho - col - 2 * pad);
-    const alto = Math.max(1, lineas.length) * 13 + 2 * pad - 2;
-    texto(etq, M + pad, y - pad - 8, { tam: tamT, bold: true });
-    lineas.forEach((l, i) => texto(l, M + col + pad, y - pad - 8 - i * 13, { tam: tamT }));
-    y -= alto;
-    linea(y);
+  if (filas.length) {
+    const arriba = y;
+    for (const [etq, valor] of filas) {
+      const lineas = partir(valor, tamT, ancho - col - 2 * pad);
+      const alto = Math.max(1, lineas.length) * 13 + 2 * pad - 2;
+      texto(etq, M + pad, y - pad - 8, { tam: tamT, bold: true });
+      lineas.forEach((l, i) => texto(l, M + col + pad, y - pad - 8 - i * 13, { tam: tamT }));
+      y -= alto;
+      linea(y);
+    }
+    linea(arriba);
+    pagina.drawLine({ start: { x: M, y: arriba }, end: { x: M, y }, thickness: 0.8, color: color(LINEA) });
+    pagina.drawLine({ start: { x: M + col, y: arriba }, end: { x: M + col, y }, thickness: 0.8, color: color(LINEA) });
+    pagina.drawLine({ start: { x: 612 - M, y: arriba }, end: { x: 612 - M, y }, thickness: 0.8, color: color(LINEA) });
   }
-  // Bordes de la tabla
-  linea(arriba);
-  pagina.drawLine({ start: { x: M, y: arriba }, end: { x: M, y }, thickness: 0.8, color: color(LINEA) });
-  pagina.drawLine({ start: { x: M + col, y: arriba }, end: { x: M + col, y }, thickness: 0.8, color: color(LINEA) });
-  pagina.drawLine({ start: { x: 612 - M, y: arriba }, end: { x: 612 - M, y }, thickness: 0.8, color: color(LINEA) });
+
+  // Nota opcional de la institución.
+  if (pl.nota.trim()) {
+    y -= 22;
+    for (const bloque of pl.nota.split(/\n\s*\n/)) {
+      parrafo(bloque, 10, 15);
+      y -= 4;
+    }
+  }
 
   // Firmas
   y -= 74;
@@ -257,17 +384,17 @@ export async function generarCertificado(lib: PDFLib, d: DatosCertificado): Prom
   const enCentro = (t: string, cx: number, yy: number, o: { tam?: number; bold?: boolean; c?: [number, number, number] } = {}) =>
     texto(t, cx - medir(t, o.tam ?? 10, o.bold) / 2, yy, o);
   enCentro(d.autorizadoPor.nombre, centroIzq, y - 15, { tam: 10.5 });
-  enCentro(d.autorizadoPor.cargo, centroIzq, y - 28, { tam: 8.5, c: GRIS });
+  enCentro(rellenar(pl.cargo_firma, valores).trim() || d.autorizadoPor.cargo, centroIzq, y - 28, { tam: 8.5, c: GRIS });
   enCentro(fechaLarga(d.autorizadoEn), centroDer, y - 15, { tam: 10.5 });
   enCentro('Fecha de autorización', centroDer, y - 28, { tam: 8.5, c: GRIS });
 
   // Pie
-  y -= 62;
-  linea(y);
-  centrado(`Documento generado por SIGEI TIC · Para verificarlo, la institución puede consultar el radicado ${d.radicado}.`, y - 16, {
-    tam: 8,
-    c: GRIS,
-  });
+  const pie = rellenar(pl.pie, valores).trim();
+  if (pie) {
+    y -= 62;
+    linea(y);
+    partir(pie, 8, ancho).forEach((l, i) => centrado(l, y - 16 - i * 11, { tam: 8, c: GRIS }));
+  }
 
   return doc.save();
 }
@@ -296,6 +423,7 @@ export function datosCertificado(a: {
   tipo: string;
   reemplazo?: string;
   revisor: { nombre: string; rol: string };
+  plantilla?: Partial<PlantillaCertificado> | null;
 }): DatosCertificado {
   const { n } = a;
   const cargo = CARGO_REVISOR[a.revisor.rol] ?? CARGO_REVISOR.rector;
@@ -320,5 +448,6 @@ export function datosCertificado(a: {
     solicitadoEn: n.created_at ?? n.fecha_inicio,
     autorizadoPor: { nombre: a.revisor.nombre || n.revisado_por || '—', cargo: cargo.cargo },
     autorizadoEn: n.revisado_en ?? new Date().toISOString(),
+    plantilla: a.plantilla ?? undefined,
   };
 }

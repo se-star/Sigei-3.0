@@ -110,7 +110,7 @@ Ejecute también `supabase/migrations/0003_acceso_docentes.sql` (vinculación y 
 
 Cuando un docente radica una solicitud de permiso, SIGEI avisa por correo a rectoría y coordinación. Cuando un directivo la aprueba, avisa al docente y a los demás directivos quién otorgó el permiso, con el **certificado de autorización en PDF** adjunto. Si la rechaza, avisa al docente. El certificado también se puede descargar en *Novedades y permisos* y en *Mi perfil → Mis solicitudes*.
 
-1. En **SQL Editor** ejecute `supabase/migrations/0009_permisos_correo.sql` (guarda el cargo de quien aprueba para el certificado).
+1. En **SQL Editor** ejecute `supabase/migrations/0009_permisos_correo.sql` (cargo de quien aprueba y plantilla del certificado de cada institución).
 2. **Función del servidor**: en **Edge Functions → Deploy a new function → Via Editor**, nómbrela `notificar-permiso`, pegue el contenido de `supabase/functions/notificar-permiso/index.ts` y despliéguela. Deje **"Verify JWT" activado** (solo la usan personas con sesión).
 3. **Correo de salida**: en **Edge Functions → Secrets** agregue estos secretos (no los comparta por chat ni los guarde en el repositorio):
    - `SMTP_HOST` = `smtp.gmail.com`
@@ -121,6 +121,8 @@ Cuando un docente radica una solicitud de permiso, SIGEI avisa por correo a rect
 
    Puede usar la misma cuenta que configuró para los códigos de ingreso. Con Resend, en cambio, cree `RESEND_API_KEY` y `CORREO_REMITENTE` con un dominio verificado.
 4. Los avisos llegan al correo con el que cada rector y coordinador ingresa a SIGEI, y al correo del docente registrado en *Docentes*. Si una institución no tiene rector ni coordinador activos, el aviso va a sus administradores.
+
+Cada institución puede personalizar el certificado en **Configuración → Certificado de permisos**: escudo, título, párrafo de autorización con campos automáticos (`{docente}`, `{documento}`, `{fechas}`, `{institucion}`…), datos de la tabla, una nota final, el cargo bajo la firma y el pie de página, con vista previa. Lo guarda rectoría y requiere la migración `0009_permisos_correo.sql`.
 
 > En el modo demo no se envían correos, pero sí se puede descargar el certificado.
 

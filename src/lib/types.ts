@@ -286,6 +286,36 @@ export interface Actividad {
 }
 
 /** Institución educativa y su configuración. */
+/* ───────── Certificado de permisos (plantilla por institución) ───────── */
+
+export type FilaCertificado =
+  | 'docente'
+  | 'documento'
+  | 'correo'
+  | 'sede'
+  | 'tipo'
+  | 'fechas'
+  | 'horario'
+  | 'motivo'
+  | 'reemplazo'
+  | 'soporte_previo'
+  | 'soporte_posterior'
+  | 'observaciones';
+
+export interface PlantillaCertificado {
+  titulo: string;
+  /** Línea bajo el nombre de la institución. */
+  encabezado: string;
+  /** Párrafo de autorización. Los textos entre ** ** van en negrita. */
+  parrafo: string;
+  filas: FilaCertificado[];
+  /** Texto opcional después de la tabla (por ejemplo, «Se expide en…»). */
+  nota: string;
+  /** Cargo bajo la firma; vacío = el cargo de quien autorizó. */
+  cargo_firma: string;
+  pie: string;
+}
+
 export interface Institucion extends Base {
   nombre: string;
   activa: boolean;
@@ -301,6 +331,8 @@ export interface Institucion extends Base {
   criterios_seguimiento: string[];
   formato_grupo: FormatoGrupo;
   jornadas: Jornada[];
+  /** Textos del certificado de permisos (migración 0009). Vacío = textos de SIGEI. */
+  plantilla_certificado?: Partial<PlantillaCertificado>;
 }
 
 /** Configuración institucional (alias histórico). */

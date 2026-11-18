@@ -44,6 +44,7 @@ export function useAvisosPermiso() {
         tipo: etiqueta(TIPOS_NOVEDAD, n.tipo),
         reemplazo: r ? nombreDocente(r) : undefined,
         revisor: { nombre: n.revisado_por ?? '', rol: n.revisado_rol || 'rector' },
+        plantilla: ajustes.plantilla_certificado,
       }),
     );
   };

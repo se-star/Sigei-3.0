@@ -38,7 +38,7 @@ function fallo(error: { message: string; code?: string } | null): asserts error 
   if (error.code === '42501') throw new Error(/hoja de vida/i.test(error.message) ? error.message : 'No tiene permisos para realizar esta acción.');
   if (error.code === '23505') throw new Error('Ya existe un registro con esos datos.');
   if (error.code === '23503') throw new Error('Este registro está relacionado con otros datos y no se puede eliminar.');
-  if (/Could not find the 'revisado_rol' column/i.test(error.message))
+  if (/Could not find the '(revisado_rol|plantilla_certificado)' column/i.test(error.message))
     throw new Error('Falta activar el certificado de permisos: ejecute en Supabase la migración 0009_permisos_correo.sql.');
   if (/Could not find the 'sedes' column/i.test(error.message))
     throw new Error('Falta activar los grados por sede: ejecute en Supabase la migración 0007_grados_por_sede.sql.');
