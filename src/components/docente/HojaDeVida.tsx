@@ -100,7 +100,7 @@ export function TarjetaFormacion({ d, puede }: { d: Docente; puede: boolean }) {
           ))}
         </ul>
       )}
-      <FormFormacion d={d} {...form} onCerrar={() => setForm({ abierto: false })} />
+      {form.abierto && <FormFormacion key={form.f?.id ?? 'nuevo'} d={d} {...form} onCerrar={() => setForm({ abierto: false })} />}
     </Tarjeta>
   );
 }
@@ -115,11 +115,7 @@ function FormFormacion({ d, abierto, f, onCerrar }: { d: Docente; abierto: boole
     institucion: '',
     anio: null,
   };
-  const [v, setV] = useState<Formacion>(vacio);
-  useEffect(() => {
-    if (abierto) setV(f ? { ...f } : { ...vacio, id: nuevoId() });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abierto, f]);
+  const [v, setV] = useState<Formacion>(() => (f ? { ...f } : { ...vacio, id: nuevoId() }));
   const enviar = async () => {
     if (!v.titulo.trim()) return toast.error('Escriba el nombre del título.');
     if (v.anio && (v.anio < 1950 || v.anio > ANIO + 1)) return toast.error(`El año debe estar entre 1950 y ${ANIO + 1}.`);
@@ -261,7 +257,7 @@ export function TarjetaExperiencia({ d, puede }: { d: Docente; puede: boolean })
           ))}
         </ul>
       )}
-      <FormExperiencia d={d} {...form} onCerrar={() => setForm({ abierto: false })} />
+      {form.abierto && <FormExperiencia key={form.e?.id ?? 'nuevo'} d={d} {...form} onCerrar={() => setForm({ abierto: false })} />}
     </Tarjeta>
   );
 }
@@ -276,11 +272,7 @@ function FormExperiencia({ d, abierto, e, onCerrar }: { d: Docente; abierto: boo
     desde: null,
     hasta: null,
   };
-  const [v, setV] = useState<Experiencia>(vacio);
-  useEffect(() => {
-    if (abierto) setV(e ? { ...e } : { ...vacio, id: nuevoId() });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [abierto, e]);
+  const [v, setV] = useState<Experiencia>(() => (e ? { ...e } : { ...vacio, id: nuevoId() }));
   const anio = (s: string) => (s ? Number(s) : null);
   const enviar = async () => {
     if (!v.cargo.trim() || !v.institucion.trim()) return toast.error('Escriba el cargo y la institución.');
@@ -416,7 +408,7 @@ export function TarjetaDocumentos({ d, puede }: { d: Docente; puede: boolean }) 
           ))}
         </ul>
       )}
-      <SubirDocumento d={d} abierto={subir} onCerrar={() => setSubir(false)} />
+      {subir && <SubirDocumento d={d} abierto onCerrar={() => setSubir(false)} />}
     </Tarjeta>
   );
 }
@@ -429,13 +421,6 @@ function SubirDocumento({ d, abierto, onCerrar }: { d: Docente; abierto: boolean
   const [categoria, setCategoria] = useState<CategoriaDocumento>('titulo');
   const [descripcion, setDescripcion] = useState('');
   const [subiendo, setSubiendo] = useState(false);
-  useEffect(() => {
-    if (abierto) {
-      setArchivo(null);
-      setCategoria('titulo');
-      setDescripcion('');
-    }
-  }, [abierto]);
 
   const elegir = (f: File | undefined) => {
     if (!f) return;
