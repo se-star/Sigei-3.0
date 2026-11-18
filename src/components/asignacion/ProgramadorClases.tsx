@@ -3,6 +3,7 @@ import { AlertTriangle, Check, Coffee, MousePointerClick, Plus, RotateCcw, X } f
 import { Boton, Campo, Entrada, Progreso, Selector, Tarjeta, Vacio } from '@/components/ui';
 import { useAjustes, useMutar, useTabla } from '@/hooks/useDatos';
 import { useToast } from '@/hooks/useToast';
+import { AsistenteClases } from './AsistenteClases';
 import { DIAS } from '@/lib/catalogos';
 import { claveCelda, estadoCelda, horasDe, horasProgramadas, sincronizarAsignacion, type EstadoCelda } from '@/lib/programador';
 import type { Dia, Franja, ID } from '@/lib/types';
@@ -108,6 +109,8 @@ export function ProgramadorClases({ inicial }: { inicial?: { docente?: ID; grupo
   const conSabado = horarios.some((h) => h.dia === 6);
   const dias = DIAS.filter((x) => x.valor <= (conSabado ? 6 : 5));
   const franjas = ajustes.franjas;
+  /** Cada franja de clase es un bloque: 1, 2, 3… sin contar los descansos. */
+  const numeroBloque = (f: Franja) => franjas.filter((x) => !x.descanso).indexOf(f) + 1;
 
   const alternarCelda = (dia: Dia, f: Franja, e: EstadoCelda) => {
     if (e.tipo === 'propia') {
@@ -176,6 +179,12 @@ export function ProgramadorClases({ inicial }: { inicial?: { docente?: ID; grupo
     return { titulo: nombre, detalle: b.aula || 'Esta clase' };
   };
 
+  const textoGuardar = !pendientes
+    ? 'Guardar'
+    : quitar.length && !nuevas.length
+      ? `Quitar ${quitar.length === 1 ? '1 clase' : `${quitar.length} clases`}`
+      : `Guardar ${nuevas.length === 1 ? '1 clase' : `${nuevas.length} clases`}${quitar.length ? ` y quitar ${quitar.length}` : ''}`;
+
   if (!franjas.length)
     return (
       <div className="card">
@@ -186,6 +195,24 @@ export function ProgramadorClases({ inicial }: { inicial?: { docente?: ID; grupo
   return (
     <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
       <div className="flex min-w-0 flex-col gap-6">
+        <AsistenteClases
+          actual={{ docente, grupo, asignatura, aula }}
+          diasSemana={dias.map((x) => x.valor as Dia)}
+          guardar={
+            nuevas.length > 0 && listo && !deOtro ? (
+              <Boton tam="sm" onClick={guardar} cargando={guardando} icono={<Check className="size-4" />}>
+                {textoGuardar}
+              </Boton>
+            ) : null
+          }
+          onProponer={(r) => {
+            if (r.docente) setDocente(r.docente);
+            if (r.grupo) setGrupo(r.grupo);
+            if (r.asignatura) setAsignatura(r.asignatura);
+            setQuitar([]);
+            setNuevas(r.marcas);
+          }}
+        />
         <Tarjeta titulo="Clase a programar">
           <div className="flex flex-col gap-4">
             <Campo etiqueta="Docente" requerido>
@@ -301,11 +328,7 @@ export function ProgramadorClases({ inicial }: { inicial?: { docente?: ID; grupo
 
             <div className="flex flex-wrap gap-2">
               <Boton className="flex-1" onClick={guardar} cargando={guardando} disabled={!listo || !!deOtro || !pendientes} icono={<Check className="size-4" />}>
-                {!pendientes
-                  ? 'Guardar'
-                  : quitar.length && !nuevas.length
-                    ? `Quitar ${quitar.length === 1 ? '1 clase' : `${quitar.length} clases`}`
-                    : `Guardar ${nuevas.length === 1 ? '1 clase' : `${nuevas.length} clases`}${quitar.length ? ` y quitar ${quitar.length}` : ''}`}
+                {textoGuardar}
               </Boton>
               {pendientes > 0 && (
                 <Boton
@@ -399,7 +422,8 @@ export function ProgramadorClases({ inicial }: { inicial?: { docente?: ID; grupo
               {franjas.map((f) => (
                 <tr key={f.inicio}>
                   <th scope="row" className="pr-1 text-right align-top text-xs font-semibold text-muted tabular-nums">
-                    <span className="block pt-2">{f.inicio}</span>
+                    {!f.descanso && <span className="block pt-1 text-[10px] font-semibold tracking-wide text-brand uppercase">Bloque {numeroBloque(f)}</span>}
+                    <span className={cx('block', f.descanso && 'pt-2')}>{f.inicio}</span>
                     <span className="block font-normal opacity-70">{f.fin}</span>
                   </th>
                   {f.descanso ? (
