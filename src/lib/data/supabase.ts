@@ -35,7 +35,7 @@ export function crearCliente(url: string, anonKey: string): SupabaseClient {
 function fallo(error: { message: string; code?: string } | null): asserts error is null {
   if (!error) return;
   if (esErrorDeRed(error)) throw traducir(error);
-  if (error.code === '42501') throw new Error('No tiene permisos para realizar esta acción.');
+  if (error.code === '42501') throw new Error(/hoja de vida/i.test(error.message) ? error.message : 'No tiene permisos para realizar esta acción.');
   if (error.code === '23505') throw new Error('Ya existe un registro con esos datos.');
   if (error.code === '23503') throw new Error('Este registro está relacionado con otros datos y no se puede eliminar.');
   if (/Could not find the 'sedes' column/i.test(error.message))
@@ -87,6 +87,13 @@ export class SupabaseDataProvider implements DataProvider {
     let q = this.sb.from(tabla).update(resto).eq('id', id);
     if (esInstitucional(tabla)) q = q.eq('institucion_id', this.exigirInstitucion());
     const { data, error } = await q.select().single();
+    // Sin filas actualizadas: la seguridad de la base no permitió el cambio (o el registro ya no existe).
+    if (error?.code === 'PGRST116')
+      throw new Error(
+        tabla === 'docentes'
+          ? 'No fue posible guardar. Si es docente, la institución debe activar la hoja de vida para docentes (migración 0008_hoja_de_vida_docente.sql).'
+          : 'No fue posible guardar: no tiene permiso para modificar este registro o ya no existe.',
+      );
     fallo(error);
     return data as Tablas[T];
   }
