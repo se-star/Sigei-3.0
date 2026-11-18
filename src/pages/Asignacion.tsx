@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, BookOpenCheck, CalendarRange, Download, ListPlus, Pencil, Plus, Trash2 } from 'lucide-react';
-import { Avatar, Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Progreso, Segmentos, Selector, Tarjeta, Vacio } from '@/components/ui';
+import { Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Modal, Progreso, Segmentos, Selector, Tarjeta, Vacio } from '@/components/ui';
 import { Buscador } from '@/components/ui/Buscador';
 import { MenuMas } from '@/components/ui/MenuMas';
 import { ProgramadorClases } from '@/components/asignacion/ProgramadorClases';
+import { TarjetaCargaDocente } from '@/components/asignacion/TarjetaCargaDocente';
 import { useAuth } from '@/hooks/useAuth';
 import { useMutar, useTabla } from '@/hooks/useDatos';
 import { useConfirmar } from '@/hooks/useConfirmar';
@@ -31,10 +32,10 @@ export default function Asignacion() {
   const [q, setQ] = useState('');
   const [grupoSel, setGrupoSel] = useState('');
   const [form, setForm] = useState<{ abierto: boolean; asig?: TAsignacion; docente_id?: ID; grupo_id?: ID }>({ abierto: false });
-  const [inicialProg, setInicialProg] = useState<{ docente?: ID; grupo?: ID }>();
+  const [inicialProg, setInicialProg] = useState<{ docente?: ID; grupo?: ID; asignatura?: ID }>();
   const [params, setParams] = useSearchParams();
   /** Abre el programador de clases sobre el horario, con el docente o el grupo ya elegido. */
-  const programar = (inicial?: { docente?: ID; grupo?: ID }) => {
+  const programar = (inicial?: { docente?: ID; grupo?: ID; asignatura?: ID }) => {
     if (inicial) setInicialProg({ ...inicial });
     setVista('programar');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -211,46 +212,22 @@ export default function Asignacion() {
             <Vacio icono={<BookOpenCheck className="size-6" />} titulo="Sin resultados" texto="No hay docentes que coincidan con la búsqueda." />
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {porDocente.map(({ d, suyas, horas }) => {
-              const exceso = horas > d.carga_maxima;
-              return (
-                <article key={d.id} className={cx('card flex flex-col p-5', exceso && 'border-danger/40')}>
-                  <div className="mb-3 flex items-center gap-3">
-                    <Avatar nombre={nombreDocente(d)} />
-                    <Link to={`/docentes/${d.id}`} className="min-w-0 flex-1 hover:text-brand">
-                      <p className="truncate font-semibold">{nombreDocente(d)}</p>
-                      <p className="truncate text-xs text-muted">{ars.get(d.area_id ?? '')?.nombre ?? 'Sin área'}</p>
-                    </Link>
-                    {exceso && (
-                      <span title="Supera la carga máxima">
-                        <AlertTriangle className="size-4 text-danger" />
-                      </span>
-                    )}
-                  </div>
-                  <div className="mb-1 flex justify-between text-xs">
-                    <span className="text-muted">Carga semanal</span>
-                    <span className={cx('font-semibold tabular-nums', exceso && 'text-danger')}>
-                      {horas} / {d.carga_maxima} h
-                    </span>
-                  </div>
-                  <Progreso valor={horas} max={d.carga_maxima} />
-                  {suyas.length ? (
-                    <ul className="mt-3 divide-y divide-line">{suyas.map((a) => filaAsig(a, 'grupo'))}</ul>
-                  ) : (
-                    <p className="mt-4 text-sm text-muted">Sin asignaturas asignadas.</p>
-                  )}
-                  {puede && (
-                    <button
-                      onClick={() => programar({ docente: d.id })}
-                      className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-line py-2 text-xs font-semibold text-muted transition hover:border-brand hover:text-brand"
-                    >
-                      <Plus className="size-3.5" /> Agregar asignatura
-                    </button>
-                  )}
-                </article>
-              );
-            })}
+          <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {porDocente.map(({ d, suyas, horas }) => (
+              <TarjetaCargaDocente
+                key={d.id}
+                d={d}
+                suyas={suyas}
+                horas={horas}
+                programadas={programadas}
+                asignaturas={asg}
+                areas={ars}
+                grupos={grs}
+                grados={porId(grados)}
+                puede={puede}
+                acciones={{ onProgramar: programar, onEditar: (a) => setForm({ abierto: true, asig: a }), onBorrar: borrar }}
+              />
+            ))}
           </div>
         )
       ) : (
