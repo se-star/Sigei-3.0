@@ -1,6 +1,6 @@
 import type { Actividad, ID, MiInstitucion, Miembro, Nuevo, ResumenInstitucion, Rol, Soporte, Tabla, Tablas } from '../types';
 import { TABLAS_INSTITUCIONALES } from '../types';
-import { armarSesion, institucionGuardada, nombreSeguro, normalizarDocumento, type AuthProvider, type DataProvider, type InstitucionPublica, type Sesion } from './provider';
+import { armarSesion, institucionGuardada, nombreSeguro, normalizarDocumento, type AuthProvider, type AvisoPermiso, type DataProvider, type InstitucionPublica, type ResultadoAviso, type Sesion } from './provider';
 import { crearDatosDemo, DEMO_ALMENDROS, DEMO_SAN_RAFAEL } from './seed';
 
 /**
@@ -256,6 +256,12 @@ export class LocalDataProvider implements DataProvider {
 
   async borrarSoportes(rutas: string[]) {
     for (const r of rutas) localStorage.removeItem(PREFIJO + 'archivo.' + r);
+  }
+
+  /** En el modo demo no se envían correos. */
+  async notificarPermiso(_cuerpo: AvisoPermiso): Promise<ResultadoAviso> {
+    await espera();
+    return { enviados: [], fallidos: [], demo: true };
   }
 
   async resumenInstituciones(): Promise<ResumenInstitucion[]> {

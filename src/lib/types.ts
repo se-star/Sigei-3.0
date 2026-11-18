@@ -202,6 +202,8 @@ export interface Novedad extends Base {
   revisado_por: string | null;
   revisado_en: string | null;
   observacion_revision: string;
+  /** Cargo de quien revisó (rector, coordinador…), para el certificado. Migración 0009. */
+  revisado_rol?: string;
   creado_por: ID | null;
   /** Archivos de soporte (incapacidad, citación…), guardados en un espacio privado. */
   soportes?: Soporte[];

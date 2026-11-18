@@ -268,7 +268,7 @@ export function descargarCSV(nombre: string, columnas: string[], filas: (string 
   descargarArchivo(`${nombre}.csv`, csv, 'text/csv;charset=utf-8');
 }
 
-export function descargarArchivo(nombre: string, contenido: string, tipo: string) {
+export function descargarArchivo(nombre: string, contenido: BlobPart, tipo: string) {
   const blob = new Blob([contenido], { type: tipo });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

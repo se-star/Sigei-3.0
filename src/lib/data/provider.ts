@@ -32,9 +32,39 @@ export interface DataProvider {
   urlSoporte(ruta: string): Promise<string>;
   borrarSoportes(rutas: string[]): Promise<void>;
 
+  /* Avisos por correo de permisos (función del servidor notificar-permiso) */
+  notificarPermiso(cuerpo: AvisoPermiso): Promise<ResultadoAviso>;
+
   /* Plataforma (superadministrador) */
   resumenInstituciones(): Promise<ResumenInstitucion[]>;
   agregarMiembroEn(institucionId: ID, correo: string, rol: Rol): Promise<'agregado' | 'no_registrado'>;
+}
+
+export interface AvisoPermiso {
+  evento: 'solicitud' | 'decision';
+  novedad_id: ID;
+  /** Certificado de autorización en PDF (base64), cuando se aprueba. */
+  certificado?: string;
+}
+
+export interface ResultadoAviso {
+  /** Correos (enmascarados) a los que se envió el aviso. */
+  enviados: string[];
+  fallidos: string[];
+  sinDestinatarios?: boolean;
+  sinCorreoDocente?: boolean;
+  /** En el modo demo no se envían correos. */
+  demo?: boolean;
+}
+
+/** Error de los avisos con un código para decidir qué mostrar. */
+export class ErrorAviso extends Error {
+  constructor(
+    mensaje: string,
+    public codigo: 'no_instalada' | 'sin_correo' | 'otro',
+  ) {
+    super(mensaje);
+  }
 }
 
 export interface Sesion {

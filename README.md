@@ -106,6 +106,24 @@ Ejecute también `supabase/migrations/0003_acceso_docentes.sql` (vinculación y 
 5. En GitHub, **Settings → Secrets and variables → Actions → Variables**, cree la variable `VITE_ACCESO_DOCENTE` con el valor `1` y vuelva a publicar. Aparecerá la pestaña *Soy docente* en el ingreso.
 6. Registre a cada docente en *Docentes* con su documento y su correo.
 
+#### Avisos por correo de permisos
+
+Cuando un docente radica una solicitud de permiso, SIGEI avisa por correo a rectoría y coordinación. Cuando un directivo la aprueba, avisa al docente y a los demás directivos quién otorgó el permiso, con el **certificado de autorización en PDF** adjunto. Si la rechaza, avisa al docente. El certificado también se puede descargar en *Novedades y permisos* y en *Mi perfil → Mis solicitudes*.
+
+1. En **SQL Editor** ejecute `supabase/migrations/0009_permisos_correo.sql` (guarda el cargo de quien aprueba para el certificado).
+2. **Función del servidor**: en **Edge Functions → Deploy a new function → Via Editor**, nómbrela `notificar-permiso`, pegue el contenido de `supabase/functions/notificar-permiso/index.ts` y despliéguela. Deje **"Verify JWT" activado** (solo la usan personas con sesión).
+3. **Correo de salida**: en **Edge Functions → Secrets** agregue estos secretos (no los comparta por chat ni los guarde en el repositorio):
+   - `SMTP_HOST` = `smtp.gmail.com`
+   - `SMTP_PORT` = `465` (Supabase no deja usar los puertos 25 ni 587 desde las funciones)
+   - `SMTP_USER` = la cuenta de Gmail que envía los avisos
+   - `SMTP_PASS` = una **contraseña de aplicación** de esa cuenta (Cuenta de Google → Seguridad → Verificación en dos pasos → Contraseñas de aplicaciones)
+   - Opcionales: `NOMBRE_REMITENTE` (por defecto «SIGEI TIC») y `SITIO_URL` (la dirección publicada de SIGEI).
+
+   Puede usar la misma cuenta que configuró para los códigos de ingreso. Con Resend, en cambio, cree `RESEND_API_KEY` y `CORREO_REMITENTE` con un dominio verificado.
+4. Los avisos llegan al correo con el que cada rector y coordinador ingresa a SIGEI, y al correo del docente registrado en *Docentes*. Si una institución no tiene rector ni coordinador activos, el aviso va a sus administradores.
+
+> En el modo demo no se envían correos, pero sí se puede descargar el certificado.
+
 > En **Authentication → URL Configuration** ponga como *Site URL* la dirección publicada (por ejemplo `https://se-star.github.io/Sigei-3.0/`) y agréguela también en *Redirect URLs*, junto con `http://localhost:5173/` si va a trabajar en local. Así funcionan los correos de confirmación y de recuperación de contraseña. Quien llega desde el enlace de recuperación ve una pantalla para crear su contraseña nueva; con sesión iniciada también se puede cambiar desde *Mi perfil*.
 
 ## Marca
