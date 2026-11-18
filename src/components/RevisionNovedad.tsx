@@ -3,6 +3,7 @@ import { AreaTexto, Boton, Campo, Modal, Selector } from '@/components/ui';
 import { ListaSoportes } from '@/components/Soportes';
 import { useAuth } from '@/hooks/useAuth';
 import { useMutar, useTabla } from '@/hooks/useDatos';
+import { conCargoRevisor, useAvisosPermiso } from '@/hooks/useAvisosPermiso';
 import { useToast } from '@/hooks/useToast';
 import { DIAS, etiqueta, TIPOS_NOVEDAD } from '@/lib/catalogos';
 import type { BloqueHorario, Novedad } from '@/lib/types';
@@ -35,6 +36,7 @@ export function RevisionNovedad({ datos, onCerrar }: { datos: DecisionNovedad | 
   const { data: horarios = [] } = useTabla('horarios');
   const { data: novedades = [] } = useTabla('novedades');
   const toast = useToast();
+  const avisos = useAvisosPermiso();
   const [obs, setObs] = useState('');
   const [reemplazo, setReemplazo] = useState('');
   useEffect(() => {
@@ -47,18 +49,20 @@ export function RevisionNovedad({ datos, onCerrar }: { datos: DecisionNovedad | 
 
   const guardar = async () => {
     try {
-      await editar.mutateAsync({
-        id: n.id,
-        cambios: {
-          estado: decision,
-          observacion_revision: obs.trim(),
-          revisado_por: perfil?.nombre ?? null,
-          revisado_en: new Date().toISOString(),
-          reemplazo_id: aprobar ? reemplazo || null : n.reemplazo_id,
-        },
-      });
+      const cambios = {
+        estado: decision,
+        observacion_revision: obs.trim(),
+        revisado_por: perfil?.nombre ?? null,
+        revisado_en: new Date().toISOString(),
+        reemplazo_id: aprobar ? reemplazo || null : n.reemplazo_id,
+      };
+      const guardada = await conCargoRevisor((conCargo) =>
+        editar.mutateAsync({ id: n.id, cambios: conCargo ? { ...cambios, revisado_rol: avisos.rolRevisor } : cambios }),
+      );
       toast.ok(aprobar ? 'Novedad aprobada.' : 'Novedad rechazada.');
       onCerrar();
+      // Correo al docente (y a los demás directivos si se aprobó), con el certificado.
+      void avisos.avisarDecision({ ...n, ...cambios, revisado_rol: avisos.rolRevisor, ...guardada });
     } catch (e) {
       toast.error(e);
     }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowDown, ArrowUp, BookOpenCheck, Check, Coffee, DatabaseBackup, Download, Plus, RotateCcw, Save, Trash2, Upload } from 'lucide-react';
+import { EditorCertificado } from '@/components/EditorCertificado';
 import { PlanEstudiosMEN } from '@/components/PlanEstudiosMEN';
 import { Boton, Campo, Encabezado, Entrada, Segmentos, Tarjeta } from '@/components/ui';
 import { useAjustes, useMutar, useTabla } from '@/hooks/useDatos';
@@ -15,7 +16,7 @@ import type { Ajustes, Franja, Tabla, Tablas } from '@/lib/types';
 import { FORMATOS_GRUPO, JORNADAS } from '@/lib/catalogos';
 import { cx, descargarArchivo, hoyISO } from '@/lib/utils';
 
-type Pestana = 'institucion' | 'areas' | 'franjas' | 'rubrica' | 'respaldo';
+type Pestana = 'institucion' | 'areas' | 'franjas' | 'rubrica' | 'certificado' | 'respaldo';
 
 export default function Configuracion() {
   const { editar } = useAuth();
@@ -33,6 +34,7 @@ export default function Configuracion() {
           { valor: 'areas', etiqueta: 'Áreas y asignaturas' },
           { valor: 'franjas', etiqueta: 'Franjas horarias' },
           { valor: 'rubrica', etiqueta: 'Rúbrica de seguimiento' },
+          { valor: 'certificado', etiqueta: 'Certificado de permisos' },
           { valor: 'respaldo', etiqueta: 'Respaldo' },
         ]}
       />
@@ -41,6 +43,7 @@ export default function Configuracion() {
         {p === 'areas' && <Areas />}
         {p === 'franjas' && <Franjas />}
         {p === 'rubrica' && <Rubrica />}
+        {p === 'certificado' && <EditorCertificado />}
         {p === 'respaldo' && <Respaldo />}
       </fieldset>
     </>

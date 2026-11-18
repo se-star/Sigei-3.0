@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Actividad, ID, MiInstitucion, Miembro, Nuevo, ResumenInstitucion, Rol, Soporte, Tabla, Tablas } from '../types';
 import { TABLAS_INSTITUCIONALES } from '../types';
-import { armarSesion, institucionGuardada, nombreSeguro, normalizarDocumento, type AuthProvider, type DataProvider, type InstitucionPublica, type Sesion } from './provider';
+import { armarSesion, ErrorAviso, institucionGuardada, nombreSeguro, normalizarDocumento, type AuthProvider, type AvisoPermiso, type DataProvider, type InstitucionPublica, type ResultadoAviso, type Sesion } from './provider';
 import { esErrorDeRed, hostDe, mensajeSinConexion } from './conexion';
 
 /**
@@ -38,6 +38,8 @@ function fallo(error: { message: string; code?: string } | null): asserts error 
   if (error.code === '42501') throw new Error(/hoja de vida/i.test(error.message) ? error.message : 'No tiene permisos para realizar esta acción.');
   if (error.code === '23505') throw new Error('Ya existe un registro con esos datos.');
   if (error.code === '23503') throw new Error('Este registro está relacionado con otros datos y no se puede eliminar.');
+  if (/Could not find the '(revisado_rol|plantilla_certificado)' column/i.test(error.message))
+    throw new Error('Falta activar el certificado de permisos: ejecute en Supabase la migración 0009_permisos_correo.sql.');
   if (/Could not find the 'sedes' column/i.test(error.message))
     throw new Error('Falta activar los grados por sede: ejecute en Supabase la migración 0007_grados_por_sede.sql.');
   if (/Could not find the '(formacion|experiencia|documentos)' column/i.test(error.message))
@@ -188,6 +190,36 @@ export class SupabaseDataProvider implements DataProvider {
   async borrarSoportes(rutas: string[]) {
     if (!rutas.length) return;
     await this.sb.storage.from('soportes').remove(rutas);
+  }
+
+  /** Llama a la función del servidor notificar-permiso (correos de solicitudes y decisiones). */
+  async notificarPermiso(cuerpo: AvisoPermiso): Promise<ResultadoAviso> {
+    const sitio = `${window.location.origin}${window.location.pathname}`;
+    const { data, error } = await this.sb.functions.invoke('notificar-permiso', { body: { ...cuerpo, sitio } });
+    if (error) {
+      const ctx = (error as { context?: Response }).context;
+      let mensaje = '';
+      let codigo = '';
+      let estado = 0;
+      if (ctx && typeof ctx.json === 'function') {
+        estado = ctx.status;
+        try {
+          const j = await ctx.json();
+          mensaje = j?.error ?? j?.message ?? '';
+          codigo = j?.codigo ?? '';
+        } catch {
+          /* respuesta sin JSON */
+        }
+      }
+      if (estado === 404 && (!mensaje || /function was not found|not found/i.test(mensaje)))
+        throw new ErrorAviso('Los avisos por correo aún no están activados: falta instalar la función notificar-permiso en Supabase.', 'no_instalada');
+      if (codigo === 'sin_correo') throw new ErrorAviso(mensaje, 'sin_correo');
+      if (mensaje) throw new ErrorAviso(mensaje, 'otro');
+      if (esErrorDeRed(error)) throw new ErrorAviso('No hay conexión para enviar los correos.', 'otro');
+      // Sin respuesta del servidor (por ejemplo, la función no existe y el navegador bloqueó la respuesta).
+      throw new ErrorAviso('Los avisos por correo aún no están activados: falta instalar la función notificar-permiso en Supabase.', 'no_instalada');
+    }
+    return data as ResultadoAviso;
   }
 
   async resumenInstituciones(): Promise<ResumenInstitucion[]> {

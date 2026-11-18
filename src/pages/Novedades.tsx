@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Bell, Check, Download, Pencil, Plus, Trash2, UserCheck, X, CalendarRange, Ban } from 'lucide-react';
+import { Bell, Check, Download, FileBadge, Mail, Pencil, Plus, Trash2, UserCheck, X, CalendarRange, Ban } from 'lucide-react';
 import { AreaTexto, Avatar, Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Panel, Segmentos, Selector, Vacio } from '@/components/ui';
 import { Buscador } from '@/components/ui/Buscador';
 import { ListaSoportes, SelectorSoportes } from '@/components/Soportes';
@@ -10,10 +10,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMutar, useTabla } from '@/hooks/useDatos';
 import { useConfirmar } from '@/hooks/useConfirmar';
 import { useToast } from '@/hooks/useToast';
+import { conCargoRevisor, useAvisosPermiso } from '@/hooks/useAvisosPermiso';
 import { ESTADOS_NOVEDAD, etiqueta, tono, TIPOS_NOVEDAD } from '@/lib/catalogos';
 import { puedeAprobar } from '@/lib/permisos';
 import type { EstadoNovedad, ID, Novedad, Nuevo, Soporte } from '@/lib/types';
 import { coincide, descargarCSV, diasEntre, fechaCorta, hoyISO, nombreDocente, porId } from '@/lib/utils';
+import { radicado } from '@/lib/certificadoPermiso';
 
 type Filtro = EstadoNovedad | 'todas';
 
@@ -33,6 +35,13 @@ export default function Novedades() {
   const [q, setQ] = useState('');
   const [form, setForm] = useState<{ abierto: boolean; novedad?: Novedad; docente_id?: ID }>({ abierto: false });
   const [revision, setRevision] = useState<{ n: Novedad; decision: 'aprobada' | 'rechazada' } | null>(null);
+  const avisos = useAvisosPermiso();
+  const [enviando, setEnviando] = useState('');
+  const reenviar = async (n: Novedad) => {
+    setEnviando(n.id);
+    await avisos.avisarDecision(n);
+    setEnviando('');
+  };
 
   useEffect(() => {
     if (params.get('nueva')) {
@@ -46,7 +55,7 @@ export default function Novedades() {
   const visibles = (novedades ?? []).filter((n) => aprueba || n.docente_id === perfil?.docente_id);
   const filtradas = visibles
     .filter((n) => (filtro === 'todas' || n.estado === filtro) && (!tipo || n.tipo === tipo))
-    .filter((n) => coincide(q, nombreDocente(docs.get(n.docente_id)), n.motivo))
+    .filter((n) => coincide(q, nombreDocente(docs.get(n.docente_id)), n.motivo, radicado(n)))
     .sort((a, b) => b.fecha_inicio.localeCompare(a.fecha_inicio));
   const cuenta = (e: Filtro) => visibles.filter((n) => e === 'todas' || n.estado === e).length;
 
@@ -149,7 +158,7 @@ export default function Novedades() {
           ]}
         />
         <div className="flex flex-col gap-2 sm:flex-row xl:ml-auto">
-          {aprueba && <Buscador valor={q} onCambio={setQ} placeholder="Buscar docente o motivo" className="sm:w-64" />}
+          {aprueba && <Buscador valor={q} onCambio={setQ} placeholder="Buscar docente, motivo o radicado" className="sm:w-64" />}
           <Selector value={tipo} onChange={(e) => setTipo(e.target.value)} className="sm:w-52" aria-label="Tipo de novedad">
             <option value="">Todos los tipos</option>
             {TIPOS_NOVEDAD.map((t) => (
@@ -199,6 +208,7 @@ export default function Novedades() {
                         {afect > 0 && ` · ${afect} ${afect === 1 ? 'clase afectada' : 'clases afectadas'}`}
                       </p>
                       {n.motivo && <p className="mt-2 text-sm text-muted">{n.motivo}</p>}
+                      <p className="mt-1 font-mono text-[11px] tracking-wide text-muted">{radicado(n)}</p>
                       <ListaSoportes soportes={n.soportes} className="mt-2" />
                       <div className="mt-3 flex flex-wrap gap-2 text-xs">
                         {r ? (
@@ -219,6 +229,23 @@ export default function Novedades() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 md:justify-end">
+                    {n.estado === 'aprobada' && (
+                      <Boton tam="sm" variante="secundario" icono={<FileBadge className="size-3.5" />} onClick={() => avisos.descargar(n)} title={`Certificado de autorización ${radicado(n)}`}>
+                        Certificado
+                      </Boton>
+                    )}
+                    {aprueba && (n.estado === 'aprobada' || n.estado === 'rechazada') && (
+                      <Boton
+                        tam="icono"
+                        variante="fantasma"
+                        onClick={() => reenviar(n)}
+                        cargando={enviando === n.id}
+                        aria-label="Reenviar el aviso por correo"
+                        title={n.estado === 'aprobada' ? 'Reenviar el aviso y el certificado por correo' : 'Reenviar el aviso al docente'}
+                      >
+                        <Mail className="size-4" />
+                      </Boton>
+                    )}
                     {aprueba && n.estado === 'pendiente' && (
                       <>
                         <Boton tam="sm" icono={<Check className="size-3.5" />} onClick={() => setRevision({ n, decision: 'aprobada' })}>
@@ -267,6 +294,7 @@ function FormNovedad({ abierto, novedad, docente_id, onCerrar }: { abierto: bool
   const { data: novedades = [] } = useTabla('novedades');
   const { crear, editar } = useMutar('novedades');
   const toast = useToast();
+  const avisos = useAvisosPermiso();
   const hoy = hoyISO();
   const vacio: Nuevo<Novedad> = {
     docente_id: '',
@@ -309,20 +337,28 @@ function FormNovedad({ abierto, novedad, docente_id, onCerrar }: { abierto: bool
     );
     if (solapa) return toast.error('Ya existe una novedad para este docente que se cruza con esas fechas.');
     const datos = { ...v, fecha_fin: fin, horas: porHoras ? Number(v.horas) : 0, motivo: v.motivo.trim(), reemplazo_id: v.reemplazo_id || null };
-    if (!novedad && datos.estado === 'aprobada') Object.assign(datos, { revisado_por: perfil?.nombre ?? null, revisado_en: new Date().toISOString() });
+    // Un directivo que registra la novedad ya aprobada (o cambia aquí la decisión) queda como quien la revisó.
+    const decide = aprueba && (datos.estado === 'aprobada' || datos.estado === 'rechazada') && datos.estado !== novedad?.estado;
+    if (decide) Object.assign(datos, { revisado_por: perfil?.nombre ?? null, revisado_en: new Date().toISOString() });
     setSubiendo(true);
     const subidos: Soporte[] = [];
     try {
       // Primero se suben los archivos nuevos; si algo falla, no se guarda la solicitud a medias.
       for (const f of nuevos) subidos.push(await backend.datos.subirSoporte(f, v.docente_id));
       const conSoportes = { ...datos, soportes: [...guardados, ...subidos] };
-      if (novedad) await editar.mutateAsync({ id: novedad.id, cambios: conSoportes });
-      else await crear.mutateAsync(conSoportes);
+      const guardada = await conCargoRevisor((conCargo) => {
+        const fila = conCargo && decide ? { ...conSoportes, revisado_rol: avisos.rolRevisor } : conSoportes;
+        return novedad ? editar.mutateAsync({ id: novedad.id, cambios: fila }) : crear.mutateAsync(fila);
+      });
       // Los soportes que se quitaron se borran del almacenamiento.
       const quitados = (novedad?.soportes ?? []).filter((x) => !guardados.some((g) => g.ruta === x.ruta));
       if (quitados.length) backend.datos.borrarSoportes(quitados.map((x) => x.ruta)).catch(() => undefined);
       toast.ok(novedad ? 'Novedad actualizada.' : aprueba ? 'Novedad registrada.' : 'Solicitud enviada. Le avisaremos cuando sea revisada.');
       onCerrar();
+      // Avisos por correo: la solicitud nueva a los directivos; la decisión al docente.
+      const fila = { ...(novedad ?? {}), ...conSoportes, ...guardada } as Novedad;
+      if (!novedad && !aprueba) void avisos.avisarSolicitud(fila);
+      else if (decide) void avisos.avisarDecision({ ...fila, revisado_rol: avisos.rolRevisor });
     } catch (e) {
       if (subidos.length) backend.datos.borrarSoportes(subidos.map((x) => x.ruta)).catch(() => undefined);
       toast.error(e);

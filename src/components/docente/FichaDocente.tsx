@@ -10,6 +10,7 @@ import {
   Check,
   CheckCircle2,
   ClipboardCheck,
+  FileBadge,
   Clock3,
   KeyRound,
   Mail,
@@ -24,6 +25,7 @@ import {
   X,
 } from 'lucide-react';
 import { Avatar, Boton, Cargando, Insignia, Progreso, Segmentos, Tarjeta, Vacio } from '@/components/ui';
+import { useAvisosPermiso } from '@/hooks/useAvisosPermiso';
 import { FormDocente } from '@/components/formularios/FormDocente';
 import { HorarioSemanal } from '@/components/HorarioSemanal';
 import { ListaSoportes } from '@/components/Soportes';
@@ -953,6 +955,7 @@ function FilaNovedad({
   aprueba: boolean;
   onRevisar: (d: 'aprobada' | 'rechazada') => void;
 }) {
+  const avisos = useAvisosPermiso();
   return (
     <li className="flex flex-wrap items-start gap-3 px-6 py-3.5">
       <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-surface-2 text-muted">
@@ -971,6 +974,16 @@ function FilaNovedad({
       </div>
       <div className="flex flex-col items-end gap-2">
         <Insignia tono={tono(ESTADOS_NOVEDAD, n.estado)}>{etiqueta(ESTADOS_NOVEDAD, n.estado)}</Insignia>
+        {n.estado === 'aprobada' && (
+          <button
+            type="button"
+            onClick={() => avisos.descargar(n)}
+            className="no-print inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+            title="Descargar el certificado de autorización"
+          >
+            <FileBadge className="size-3.5" /> Certificado
+          </button>
+        )}
         {n.estado === 'pendiente' && aprueba && (
           <span className="no-print flex gap-1.5">
             <Boton tam="sm" icono={<Check className="size-3.5" />} onClick={() => onRevisar('aprobada')}>
