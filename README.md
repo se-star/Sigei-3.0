@@ -133,6 +133,18 @@ Cada institución puede personalizar el certificado en **Configuración → Cert
 
 > En el modo demo no se envían correos, pero sí se puede descargar el certificado.
 
+#### Protección de datos personales
+
+SIGEI trae la **política de tratamiento de datos**, los **términos y condiciones** y la **política de cookies** en `#/legal/privacidad`, `#/legal/terminos` y `#/legal/cookies`. Se pueden ver sin iniciar sesión y están enlazadas desde el ingreso, el menú de usuario y *Mi perfil*. La primera vez que alguien ingresa debe aceptarlas, y queda registrado quién aceptó, qué versión y cuándo, como prueba de la autorización (Ley 1581 de 2012).
+
+1. En **SQL Editor** ejecute `supabase/migrations/0011_proteccion_datos.sql` (contacto de la institución y registro de aceptaciones). Sin esta migración, la aceptación se guarda solo en el navegador de cada persona.
+2. Cada institución completa en **Configuración → Institución → Contacto y protección de datos** su dirección, teléfono y el correo donde atiende consultas y reclamos sobre datos. Esos datos, junto con el nombre y el NIT, aparecen en la política como responsable del tratamiento.
+3. Para que la política y los términos identifiquen a quien opera la plataforma (el encargado del tratamiento), cree en GitHub, en **Settings → Secrets and variables → Actions → Variables**, las variables `VITE_OPERADOR_NOMBRE` (nombre o razón social), `VITE_OPERADOR_ID` (NIT o cédula), `VITE_OPERADOR_CORREO` y `VITE_OPERADOR_CIUDAD`, y vuelva a publicar.
+
+Si cambia los textos de forma sustancial, actualice `VERSION_POLITICAS` en `src/lib/legal.ts`: todas las personas deberán aceptarlos de nuevo. Si agrega algo nuevo al almacenamiento del navegador, inclúyalo en la lista `ALMACENAMIENTO` del mismo archivo, que alimenta la política de cookies.
+
+> Estos textos son una base redactada con la normativa colombiana vigente (Ley 1581 de 2012, Decreto 1074 de 2015, Ley 1273 de 2009, Ley 527 de 1999). Antes de usarlos con datos reales, conviene que los revise el abogado o el oficial de protección de datos de la institución.
+
 > En **Authentication → URL Configuration** ponga como *Site URL* la dirección publicada (por ejemplo `https://se-star.github.io/Sigei-3.0/`) y agréguela también en *Redirect URLs*, junto con `http://localhost:5173/` si va a trabajar en local. Así funcionan los correos de confirmación y de recuperación de contraseña. Quien llega desde el enlace de recuperación ve una pantalla para crear su contraseña nueva; con sesión iniciada también se puede cambiar desde *Mi perfil*.
 
 ## Marca
@@ -158,6 +170,8 @@ El flujo `.github/workflows/deploy.yml` compila y publica el sitio cada vez que 
 2. En **Settings → Secrets and variables → Actions**, cree `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`. Si no los crea, el sitio se publica en modo demo.
 
 La clave *anon* de Supabase es pública por diseño. La seguridad la dan las políticas RLS del esquema.
+
+Accesibilidad: las pantallas principales se revisaron con axe-core contra WCAG 2.1 nivel AA (el estándar que adopta la Resolución 1519 de 2020 de MinTIC), en tema claro y oscuro.
 
 ---
 

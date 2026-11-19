@@ -12,6 +12,10 @@ function tamano(b: number) {
   return b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`;
 }
 
+/** Ley 1581 de 2012, art. 6: el tratamiento de datos sensibles requiere autorización explícita y es facultativo. */
+export const AVISO_SENSIBLE =
+  'Si el soporte tiene datos de salud (dato sensible), al adjuntarlo autoriza su uso solo para justificar este permiso. Es opcional y lo ven únicamente los directivos y usted.';
+
 /** Abre un soporte guardado en una pestaña nueva (con un enlace temporal). */
 export function useAbrirSoporte() {
   const toast = useToast();
@@ -139,6 +143,7 @@ export function SelectorSoportes({
             Adjuntar archivo
           </Boton>
           <p className="text-xs text-muted">PDF o foto (JPG, PNG, WEBP) · hasta 5 MB · máximo {SOPORTE_MAX_ARCHIVOS} archivos</p>
+          <p className="max-w-md text-xs text-muted">{AVISO_SENSIBLE}</p>
           <input
             ref={input}
             type="file"
@@ -192,7 +197,7 @@ export function SubirSoportePendiente({ novedadId, docenteId, onListo }: { noved
 
   return (
     <>
-      <Boton tam="sm" icono={<Upload className="size-3.5" />} cargando={subiendo} onClick={() => input.current?.click()}>
+      <Boton tam="sm" icono={<Upload className="size-3.5" />} cargando={subiendo} onClick={() => input.current?.click()} title={AVISO_SENSIBLE}>
         Subir soporte
       </Boton>
       <input

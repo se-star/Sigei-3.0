@@ -40,12 +40,22 @@ export interface DataProvider {
   firmaDe(usuarioId: ID): Promise<string>;
   guardarMiFirma(firma: string): Promise<void>;
 
+  /* Protección de datos: aceptación de los términos y la política (migración 0011) */
+  /** Última versión de la política que aceptó la persona en sesión, o null. */
+  miAceptacion(): Promise<Aceptacion | null>;
+  aceptarPoliticas(version: string): Promise<void>;
+
   /* Avisos por correo de permisos (función del servidor notificar-permiso) */
   notificarPermiso(cuerpo: AvisoPermiso): Promise<ResultadoAviso>;
 
   /* Plataforma (superadministrador) */
   resumenInstituciones(): Promise<ResumenInstitucion[]>;
   agregarMiembroEn(institucionId: ID, correo: string, rol: Rol): Promise<'agregado' | 'no_registrado'>;
+}
+
+export interface Aceptacion {
+  version: string;
+  aceptado_en: string;
 }
 
 export interface AvisoPermiso {

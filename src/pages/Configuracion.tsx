@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowDown, ArrowUp, BookOpenCheck, Check, Coffee, DatabaseBackup, Download, Plus, RotateCcw, Save, Trash2, Upload } from 'lucide-react';
+import { faltantesResponsable, responsableDe } from '@/lib/legal';
 import { EditorCertificado } from '@/components/EditorCertificado';
 import { PlanEstudiosMEN } from '@/components/PlanEstudiosMEN';
 import { Boton, Campo, Encabezado, Entrada, Segmentos, Tarjeta } from '@/components/ui';
@@ -76,6 +77,18 @@ function useGuardarAjustes() {
   };
 }
 
+const CONTACTO = ['direccion', 'telefono', 'correo_datos'] as const;
+
+/** Los campos de contacto (migración 0011) solo se envían si cambiaron: así guardar funciona aunque falte la migración. */
+function soloCambiosDeContacto(v: Ajustes, antes: Ajustes): Ajustes {
+  const r = { ...v };
+  for (const k of CONTACTO) {
+    if ((v[k] ?? '').trim() === (antes[k] ?? '')) delete r[k];
+    else r[k] = (v[k] ?? '').trim();
+  }
+  return r;
+}
+
 function Institucion() {
   const ajustes = useAjustes();
   const { guardar, pendiente } = useGuardarAjustes();
@@ -93,6 +106,7 @@ function Institucion() {
       )}
     </Campo>
   );
+  const faltan = faltantesResponsable(responsableDe(v));
   return (
     <Tarjeta titulo="Datos institucionales" className="max-w-3xl">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -104,6 +118,25 @@ function Institucion() {
         {campo('rector', 'Rector(a)')}
         {campo('anio_lectivo', 'Año lectivo', { tipo: 'number' })}
         {campo('periodos', 'Número de períodos académicos', { tipo: 'number' })}
+      </div>
+
+      <div className="mt-8 border-t border-line pt-6">
+        <h3 className="text-[17px] font-semibold">Contacto y protección de datos</h3>
+        <p className="mt-1 mb-4 text-sm text-muted">
+          La institución es la responsable de los datos de su personal (Ley 1581 de 2012). Estos datos aparecen en la{' '}
+          <a href="#/legal/privacidad" className="font-medium text-ink underline underline-offset-2">
+            política de tratamiento de datos
+          </a>{' '}
+          como canal para consultas y reclamos.
+        </p>
+        {faltan.length > 0 && (
+          <p className="mb-4 rounded-[16px] bg-warn-soft px-4 py-3 text-sm text-warn">Para que la política quede completa falta: {faltan.join(', ')}.</p>
+        )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {campo('direccion', 'Dirección', { col: true })}
+          {campo('telefono', 'Teléfono', { tipo: 'tel' })}
+          {campo('correo_datos', 'Correo para datos personales', { tipo: 'email', ayuda: 'Donde se reciben consultas y reclamos sobre datos.' })}
+        </div>
       </div>
 
       <div className="mt-8 border-t border-line pt-6">
@@ -154,7 +187,7 @@ function Institucion() {
         {v.jornadas.length === 0 && <p className="mt-2 text-xs font-medium text-danger">Elija al menos una jornada.</p>}
       </div>
       <div className="mt-6 flex justify-end">
-        <Boton icono={<Save className="size-4" />} cargando={pendiente} disabled={!v.jornadas.length} onClick={() => guardar(v)}>
+        <Boton icono={<Save className="size-4" />} cargando={pendiente} disabled={!v.jornadas.length} onClick={() => guardar(soloCambiosDeContacto(v, ajustes))}>
           Guardar cambios
         </Boton>
       </div>

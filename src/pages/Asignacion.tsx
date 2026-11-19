@@ -394,7 +394,7 @@ function FormAsignacion({
                   {total} / {docente.carga_maxima} h
                 </span>
               </div>
-              <Progreso valor={total} max={docente.carga_maxima} />
+              <Progreso valor={total} max={docente.carga_maxima} etiqueta="Horas asignadas frente a la carga máxima" />
               {total > docente.carga_maxima && (
                 <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-danger">
                   <AlertTriangle className="size-3.5" /> Supera la carga máxima en {total - docente.carga_maxima} h.

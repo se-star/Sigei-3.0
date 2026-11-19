@@ -1,6 +1,6 @@
 import type { Actividad, ID, MiInstitucion, Miembro, Nuevo, ResumenInstitucion, Rol, Soporte, Tabla, Tablas } from '../types';
 import { TABLAS_INSTITUCIONALES } from '../types';
-import { armarSesion, institucionGuardada, nombreSeguro, normalizarDocumento, type AuthProvider, type AvisoPermiso, type DataProvider, type InstitucionPublica, type ResultadoAviso, type Sesion } from './provider';
+import { armarSesion, institucionGuardada, nombreSeguro, normalizarDocumento, type Aceptacion, type AuthProvider, type AvisoPermiso, type DataProvider, type InstitucionPublica, type ResultadoAviso, type Sesion } from './provider';
 import { crearDatosDemo, DEMO_ALMENDROS, DEMO_SAN_RAFAEL } from './seed';
 
 /**
@@ -274,6 +274,15 @@ export class LocalDataProvider implements DataProvider {
     const clave = PREFIJO + 'firma.' + yo.id;
     if (firma) localStorage.setItem(clave, firma);
     else localStorage.removeItem(clave);
+  }
+
+  /** En el modo demo la aceptación vale para todo este navegador (los datos de ejemplo también viven aquí). */
+  async miAceptacion(): Promise<Aceptacion | null> {
+    return leer<Aceptacion | null>('sigei.politicas.demo', null);
+  }
+
+  async aceptarPoliticas(version: string) {
+    escribir('sigei.politicas.demo', { version, aceptado_en: new Date().toISOString() });
   }
 
   /** En el modo demo no se envían correos. */

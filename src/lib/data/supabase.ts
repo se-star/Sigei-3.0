@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Actividad, ID, MiInstitucion, Miembro, Nuevo, ResumenInstitucion, Rol, Soporte, Tabla, Tablas } from '../types';
 import { TABLAS_INSTITUCIONALES } from '../types';
-import { armarSesion, ErrorAviso, institucionGuardada, nombreSeguro, normalizarDocumento, type AuthProvider, type AvisoPermiso, type DataProvider, type InstitucionPublica, type ResultadoAviso, type Sesion } from './provider';
+import { armarSesion, ErrorAviso, institucionGuardada, nombreSeguro, normalizarDocumento, type Aceptacion, type AuthProvider, type AvisoPermiso, type DataProvider, type InstitucionPublica, type ResultadoAviso, type Sesion } from './provider';
 import { esErrorDeRed, hostDe, mensajeSinConexion } from './conexion';
 
 /**
@@ -43,6 +43,8 @@ function fallo(error: { message: string; code?: string } | null): asserts error 
   if (/firma_url_valida/i.test(error.message)) throw new Error('La firma no es válida: use una imagen PNG pequeña.');
   if (/Could not find the '(revisado_rol|plantilla_certificado)' column/i.test(error.message))
     throw new Error('Falta activar el certificado de permisos: ejecute en Supabase la migración 0009_permisos_correo.sql.');
+  if (/Could not find the '(direccion|telefono|correo_datos)' column/i.test(error.message))
+    throw new Error('Falta activar los datos de contacto para la política de privacidad: ejecute en Supabase la migración 0011_proteccion_datos.sql.');
   if (/Could not find the 'sedes' column/i.test(error.message))
     throw new Error('Falta activar los grados por sede: ejecute en Supabase la migración 0007_grados_por_sede.sql.');
   if (/Could not find the '(formacion|experiencia|documentos)' column/i.test(error.message))
@@ -209,6 +211,43 @@ export class SupabaseDataProvider implements DataProvider {
 
   async guardarMiFirma(firma: string) {
     const { error } = await this.sb.rpc('guardar_mi_firma', { firma });
+    fallo(error);
+  }
+
+  /** Sin la migración 0011 la aceptación queda solo en este navegador (respaldo). */
+  private claveAceptacion = (uid: string) => `sigei.politicas.${uid}`;
+
+  async miAceptacion(): Promise<Aceptacion | null> {
+    const uid = (await this.sb.auth.getSession()).data.session?.user.id;
+    if (!uid) return null;
+    const { data, error } = await this.sb
+      .from('consentimientos')
+      .select('version, aceptado_en')
+      .eq('usuario_id', uid)
+      .order('aceptado_en', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      if (esErrorDeRed(error)) throw traducir(error);
+      try {
+        return JSON.parse(localStorage.getItem(this.claveAceptacion(uid)) || 'null');
+      } catch {
+        return null;
+      }
+    }
+    return (data as Aceptacion | null) ?? null;
+  }
+
+  async aceptarPoliticas(version: string) {
+    const uid = (await this.sb.auth.getSession()).data.session?.user.id;
+    if (!uid) throw new Error('Inicie sesión de nuevo.');
+    const { error } = await this.sb.rpc('aceptar_politicas', { version, agente: navigator.userAgent.slice(0, 400) });
+    if (error && /Could not find the function public\.aceptar_politicas/i.test(error.message)) {
+      // Base de datos sin la migración 0011: se recuerda en este navegador para no bloquear el ingreso.
+      console.warn('SIGEI: falta la migración 0011_proteccion_datos.sql; la aceptación se guardó solo en este navegador.');
+      localStorage.setItem(this.claveAceptacion(uid), JSON.stringify({ version, aceptado_en: new Date().toISOString() }));
+      return;
+    }
     fallo(error);
   }
 

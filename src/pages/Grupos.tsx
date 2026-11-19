@@ -212,7 +212,7 @@ export default function Grupos() {
                                     </p>
                                     <div className="mt-1.5 flex items-center gap-2">
                                       <div className="flex-1">
-                                        <Progreso valor={g.estudiantes} max={g.capacidad} />
+                                        <Progreso valor={g.estudiantes} max={g.capacidad} etiqueta="Estudiantes frente a la capacidad" />
                                       </div>
                                       <span className="text-xs text-muted tabular-nums">
                                         {g.estudiantes}/{g.capacidad}

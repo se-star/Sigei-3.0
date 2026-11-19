@@ -36,10 +36,21 @@ export default function Login() {
         <div className="anim-rise card mt-10 w-full max-w-md p-6 sm:p-8">
           <Acceso />
         </div>
-        <p className="mt-10 text-[13px] text-muted">
+        <footer className="mt-10 text-center text-[13px] text-muted">
+          <nav aria-label="Documentos legales" className="mb-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
+            <a href="#/legal/privacidad" className="underline-offset-2 hover:text-ink hover:underline">
+              Política de datos
+            </a>
+            <a href="#/legal/terminos" className="underline-offset-2 hover:text-ink hover:underline">
+              Términos
+            </a>
+            <a href="#/legal/cookies" className="underline-offset-2 hover:text-ink hover:underline">
+              Cookies
+            </a>
+          </nav>
           © {new Date().getFullYear()} SIGEI TIC
           {servidorDatos && <span className="block text-center text-xs">Servidor de datos: {servidorDatos}</span>}
-        </p>
+        </footer>
       </div>
     </div>
   );
@@ -79,7 +90,7 @@ function Constelacion() {
         </span>
       </div>
       <div className={cx(tarjeta, 'bottom-6 left-[14%]')} style={{ ['--giro' as string]: '3deg', animationDelay: '-1s' }}>
-        <span className="grid size-12 place-items-center rounded-full bg-[#8a7563] text-sm font-medium text-white">LR</span>
+        <span className="grid size-12 place-items-center rounded-full bg-[#7a6656] text-sm font-medium text-white">LR</span>
         <span>
           <span className="block text-sm font-semibold">Laura Restrepo</span>
           <span className="block text-xs text-muted">17 de 22 horas</span>

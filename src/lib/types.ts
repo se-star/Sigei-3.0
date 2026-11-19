@@ -335,6 +335,11 @@ export interface Institucion extends Base {
   jornadas: Jornada[];
   /** Textos del certificado de permisos (migración 0009). Vacío = textos de SIGEI. */
   plantilla_certificado?: Partial<PlantillaCertificado>;
+  /* Contacto para la política de privacidad (migración 0011). */
+  direccion?: string;
+  telefono?: string;
+  /** Correo para consultas y reclamos sobre datos personales. */
+  correo_datos?: string;
 }
 
 /** Configuración institucional (alias histórico). */
