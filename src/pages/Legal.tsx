@@ -3,6 +3,8 @@ import { ArrowLeft, Printer } from 'lucide-react';
 import { Logo, Wordmark } from '@/components/layout/Logo';
 import { ALMACENAMIENTO, DOCS_LEGALES, fechaVersion, nombreOperador, OPERADOR, VERSION_POLITICAS, type DocLegal, type Responsable } from '@/lib/legal';
 import { cx } from '@/lib/utils';
+import { Creditos } from '@/components/Creditos';
+import { FINANCIADOR, PROYECTO, TITULAR } from '@/lib/creditos';
 
 interface Props {
   doc: DocLegal;
@@ -74,13 +76,15 @@ export default function Legal({ doc, responsable, volver = { texto: 'Volver a SI
       </main>
 
       <footer className="no-print border-t border-line">
-        <div className="mx-auto flex max-w-4xl flex-wrap gap-x-5 gap-y-2 px-4 py-6 text-sm text-muted sm:px-6">
-          <span>© {new Date().getFullYear()} SIGEI TIC</span>
-          {DOCS_LEGALES.map((d) => (
-            <a key={d.v} href={`#/legal/${d.v}`} className="underline-offset-2 hover:text-ink hover:underline">
-              {d.t}
-            </a>
-          ))}
+        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+          <nav aria-label="Otros documentos legales" className="mb-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
+            {DOCS_LEGALES.map((d) => (
+              <a key={d.v} href={`#/legal/${d.v}`} className="underline-offset-2 hover:text-ink hover:underline">
+                {d.t}
+              </a>
+            ))}
+          </nav>
+          <Creditos variante="legal" className="sm:items-start" />
         </div>
       </footer>
     </div>
@@ -415,8 +419,9 @@ function Terminos({ r }: { r: Responsable | null }) {
 
       <Seccion n={7} titulo="Propiedad intelectual">
         <p>
-          El software, la marca SIGEI TIC y su diseño pertenecen al operador. La información que registra la institución le pertenece a ella y puede descargarla
-          en cualquier momento.
+          El software SIGEI TIC, su marca y su diseño son propiedad del {TITULAR}, que los desarrolló en el marco del proyecto {PROYECTO}, financiado por la{' '}
+          {FINANCIADOR}. Todos los derechos reservados. La información que registra la institución le pertenece a ella y puede descargarla en cualquier
+          momento.
         </p>
       </Seccion>
 
