@@ -204,6 +204,8 @@ export interface Novedad extends Base {
   observacion_revision: string;
   /** Cargo de quien revisó (rector, coordinador…), para el certificado. Migración 0009. */
   revisado_rol?: string;
+  /** Usuario que revisó (para poner su firma en el certificado). Migración 0010. */
+  revisado_por_id?: ID | null;
   creado_por: ID | null;
   /** Archivos de soporte (incapacidad, citación…), guardados en un espacio privado. */
   soportes?: Soporte[];

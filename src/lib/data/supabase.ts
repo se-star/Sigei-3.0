@@ -38,6 +38,9 @@ function fallo(error: { message: string; code?: string } | null): asserts error 
   if (error.code === '42501') throw new Error(/hoja de vida/i.test(error.message) ? error.message : 'No tiene permisos para realizar esta acción.');
   if (error.code === '23505') throw new Error('Ya existe un registro con esos datos.');
   if (error.code === '23503') throw new Error('Este registro está relacionado con otros datos y no se puede eliminar.');
+  if (/Could not find the '(revisado_por_id|firma_url)' column|Could not find the function public\.(guardar_mi_firma|agregar_soportes_novedad)/i.test(error.message))
+    throw new Error('Falta activar la firma y los soportes pendientes: ejecute en Supabase la migración 0010_permisos_firma_soportes.sql.');
+  if (/firma_url_valida/i.test(error.message)) throw new Error('La firma no es válida: use una imagen PNG pequeña.');
   if (/Could not find the '(revisado_rol|plantilla_certificado)' column/i.test(error.message))
     throw new Error('Falta activar el certificado de permisos: ejecute en Supabase la migración 0009_permisos_correo.sql.');
   if (/Could not find the 'sedes' column/i.test(error.message))
@@ -190,6 +193,23 @@ export class SupabaseDataProvider implements DataProvider {
   async borrarSoportes(rutas: string[]) {
     if (!rutas.length) return;
     await this.sb.storage.from('soportes').remove(rutas);
+  }
+
+  async agregarSoportes(novedadId: ID, soportes: Soporte[]) {
+    const { error } = await this.sb.rpc('agregar_soportes_novedad', { novedad: novedadId, nuevos: soportes });
+    fallo(error);
+  }
+
+  async firmaDe(usuarioId: ID): Promise<string> {
+    const { data, error } = await this.sb.from('perfiles').select('firma_url').eq('id', usuarioId).maybeSingle();
+    // Sin la migración 0010 (o sin permiso para ver ese perfil) simplemente no hay firma.
+    if (error) return '';
+    return (data as { firma_url?: string } | null)?.firma_url ?? '';
+  }
+
+  async guardarMiFirma(firma: string) {
+    const { error } = await this.sb.rpc('guardar_mi_firma', { firma });
+    fallo(error);
   }
 
   /** Llama a la función del servidor notificar-permiso (correos de solicitudes y decisiones). */

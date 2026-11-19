@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Download, Printer } from 'lucide-react';
 import { Boton, Encabezado, Selector, Tarjeta } from '@/components/ui';
+import { InformePermisos } from '@/components/InformePermisos';
 import { useTabla } from '@/hooks/useDatos';
 import { DIAS, ESTADOS_DOCENTE, etiqueta, TIPOS_NOVEDAD, TIPOS_SEGUIMIENTO, VINCULACIONES } from '@/lib/catalogos';
 import { descargarCSV, diasEntre, duracionHoras, nombreDocente, nombreGrupo, porId } from '@/lib/utils';
@@ -41,6 +43,11 @@ export default function Reportes() {
   const { data: horarios = [] } = useTabla('horarios');
   const { data: seguimientos = [] } = useTabla('seguimientos');
   const { data: sedes = [] } = useTabla('sedes');
+  const { hash } = useLocation();
+  // Desde Novedades → Informe se llega directo al informe de permisos.
+  useEffect(() => {
+    if (hash === '#permisos') setTimeout(() => document.getElementById('permisos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }, [hash]);
   const anioActual = new Date().getFullYear();
   const [anio, setAnio] = useState(anioActual);
 
@@ -183,6 +190,10 @@ export default function Reportes() {
           </>
         }
       />
+
+      <section id="permisos" className="mb-6 scroll-mt-24">
+        <InformePermisos />
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
         <Tarjeta titulo={`Días de ausencia por mes · ${anio}`} className="lg:col-span-2">

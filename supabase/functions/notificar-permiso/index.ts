@@ -5,7 +5,11 @@
 //     avisa a rectoría y coordinación de su institución.
 //   • { evento: 'decision', novedad_id, certificado? } → cuando un directivo aprueba,
 //     avisa al docente y a los demás directivos quién otorgó el permiso, con el
-//     certificado de autorización en PDF adjunto. Si se rechaza, avisa al docente.
+//     certificado de autorización en PDF adjunto, y al docente de reemplazo las
+//     clases que debe cubrir. Si se rechaza, avisa al docente.
+//   • { evento: 'reemplazo', novedad_id } → solo el aviso al docente de reemplazo
+//     (cuando se asigna o se cambia después de aprobar).
+//   • { evento: 'soporte', novedad_id } → recuerda al docente que falta el soporte.
 //
 // La función comprueba quién la llama (debe tener sesión en SIGEI) y que tenga
 // permiso sobre esa solicitud; los correos de los destinatarios nunca salen del
@@ -214,6 +218,39 @@ export function certificadoValido(b64: unknown): string | null {
   }
 }
 
+/* ───────── Clases que cubre el reemplazo ───────── */
+
+export interface Clase {
+  dia: number;
+  hora_inicio: string;
+  hora_fin: string;
+  aula: string | null;
+  grupo_id: string;
+  asignatura_id: string;
+}
+
+const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+/** Clases del docente ausente en cada fecha del permiso (máximo 62 días). */
+export function clasesAfectadas(n: { fecha_inicio: string; fecha_fin: string }, horario: Clase[]): { fecha: string; clase: Clase }[] {
+  const out: { fecha: string; clase: Clase }[] = [];
+  const inicio = new Date(`${n.fecha_inicio}T12:00:00Z`);
+  const fin = new Date(`${n.fecha_fin || n.fecha_inicio}T12:00:00Z`);
+  for (let i = 0; i < 62; i++) {
+    const d = new Date(inicio.getTime() + i * 86_400_000);
+    if (d > fin) break;
+    const fecha = d.toISOString().slice(0, 10);
+    for (const c of horario) if (c.dia === d.getUTCDay()) out.push({ fecha, clase: c });
+  }
+  return out.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.clase.hora_inicio.localeCompare(b.clase.hora_inicio));
+}
+
+/** «Lun 17 nov» */
+export function fechaCorta(iso: string): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  return `${DIAS_CORTOS[d.getUTCDay()]} ${d.getUTCDate()} ${MESES[d.getUTCMonth()].slice(0, 3)}`;
+}
+
 /* ───────── Proceso ───────── */
 
 interface Novedad {
@@ -235,7 +272,8 @@ interface Novedad {
 
 export async function procesar(admin: SupabaseClient, usuarioId: string, entrada: Record<string, unknown>, enviar: Enviar, sitio: string) {
   const evento = entrada.evento;
-  if (evento !== 'solicitud' && evento !== 'decision') return { estado: 400, cuerpo: { error: 'Evento no válido.' } };
+  if (evento !== 'solicitud' && evento !== 'decision' && evento !== 'reemplazo' && evento !== 'soporte')
+    return { estado: 400, cuerpo: { error: 'Evento no válido.' } };
   const { data: n } = await admin.from('novedades').select('*').eq('id', String(entrada.novedad_id ?? '')).maybeSingle<Novedad>();
   if (!n) return { estado: 404, cuerpo: { error: 'No encontramos la solicitud.' } };
 
@@ -310,12 +348,94 @@ export async function procesar(admin: SupabaseClient, usuarioId: string, entrada
     return { estado: 200, cuerpo: { enviados, fallidos, sinDestinatarios: para.length === 0 } };
   }
 
-  // Decisión
-  if (!esDirectivo) return { estado: 403, cuerpo: { error: 'Solo rectoría o coordinación pueden notificar una decisión.' } };
-  if (n.estado !== 'aprobada' && n.estado !== 'rechazada') return { estado: 409, cuerpo: { error: 'La solicitud aún no tiene una decisión.' } };
-  const aprobada = n.estado === 'aprobada';
+  // Los demás avisos los envía rectoría o coordinación.
+  if (!esDirectivo) return { estado: 403, cuerpo: { error: 'Solo rectoría o coordinación pueden enviar este aviso.' } };
   const quien = perfil?.nombre || n.revisado_por || 'Directivo';
   const cargo = CARGOS[rol ?? ''] ?? 'Directivo(a)';
+
+  /** Correo del docente: el del directorio o, si no tiene, el de su cuenta. */
+  const correoDe = async (docenteId: string, delDirectorio?: string | null) => {
+    let c = String(delDirectorio ?? '').trim();
+    if (!c.includes('@')) {
+      const { data: m } = await admin.from('membresias').select('perfiles!inner(email)').eq('institucion_id', n.institucion_id).eq('docente_id', docenteId).limit(1).maybeSingle();
+      const p = m ? ((Array.isArray(m.perfiles) ? m.perfiles[0] : m.perfiles) as { email?: string }) : null;
+      c = String(p?.email ?? '').trim();
+    }
+    return c.includes('@') ? c : '';
+  };
+
+  /** Al docente de reemplazo: las clases que debe cubrir (sin el motivo ni el tipo de permiso, que son del docente). */
+  const avisarReemplazo = async (): Promise<'enviado' | 'sin_correo' | 'no_aplica'> => {
+    if (n.estado !== 'aprobada' || !n.reemplazo_id || n.reemplazo_id === n.docente_id) return 'no_aplica';
+    const { data: r } = await admin.from('docentes').select('id, nombres, apellidos, email').eq('id', n.reemplazo_id).maybeSingle();
+    if (!r) return 'no_aplica';
+    const para = await correoDe(r.id, r.email);
+    if (!para) return 'sin_correo';
+    const { data: horario } = await admin.from('horarios').select('dia, hora_inicio, hora_fin, aula, grupo_id, asignatura_id').eq('docente_id', n.docente_id);
+    const clases = clasesAfectadas(n, (horario ?? []) as Clase[]);
+    const ids = (k: 'grupo_id' | 'asignatura_id') => [...new Set(clases.map((x) => x.clase[k]))];
+    const [{ data: gs }, { data: as }] = await Promise.all([
+      clases.length ? admin.from('grupos').select('id, nombre').in('id', ids('grupo_id')) : Promise.resolve({ data: [] }),
+      clases.length ? admin.from('asignaturas').select('id, nombre').in('id', ids('asignatura_id')) : Promise.resolve({ data: [] }),
+    ]);
+    const nombre = (lista: { id: string; nombre: string }[] | null, id: string) => lista?.find((x) => x.id === id)?.nombre ?? '—';
+    const max = 40;
+    const filasClases: [string, string][] = clases
+      .slice(0, max)
+      .map(({ fecha, clase }) => [
+        `${fechaCorta(fecha)} · ${clase.hora_inicio.slice(0, 5)}–${clase.hora_fin.slice(0, 5)}`,
+        [nombre(as as never, clase.asignatura_id), `Grupo ${nombre(gs as never, clase.grupo_id)}`, clase.aula].filter(Boolean).join(' · '),
+      ]);
+    if (clases.length > max) filasClases.push(['…', `y ${clases.length - max} clases más`]);
+    const notas = [
+      n.horas > 0 ? `El permiso es por ${n.horas} ${n.horas === 1 ? 'hora' : 'horas'}: confirme con coordinación cuáles de estas clases debe cubrir.` : '',
+      'Si no puede cubrir alguna clase, avise cuanto antes a coordinación.',
+    ].filter(Boolean);
+    await mandar({
+      para,
+      asunto: `Reemplazo asignado: clases de ${nombreDoc} · ${fechas(n).split(' · ')[0]}`,
+      html: plantilla({
+        institucion: nombreInst,
+        titulo: 'Usted cubrirá unas clases',
+        aviso: { texto: `${clases.length} ${clases.length === 1 ? 'clase' : 'clases'} por cubrir`, tono: 'info' },
+        intro: `Hola ${escapar(r.nombres.split(' ')[0])}, ${escapar(quien)}, ${escapar(cargo.toLowerCase())}, le asignó como reemplazo de <strong>${escapar(nombreDoc)}</strong> durante su ausencia, ${escapar(fechas(n).toLowerCase())}.${clases.length ? ' Estas son las clases que debe cubrir:' : ''}`,
+        filas: clases.length ? filasClases : [['Clases', 'No hay clases en el horario para esas fechas. Coordinación le indicará qué hacer.']],
+        boton: { texto: 'Ver mi horario', url: `${sitio.replace(/\/?(#.*)?$/, '/')}#/horarios` },
+        nota: notas.map(escapar).join('<br>'),
+      }),
+    });
+    return 'enviado';
+  };
+
+  if (evento === 'reemplazo') {
+    if (n.estado !== 'aprobada' || !n.reemplazo_id) return { estado: 409, cuerpo: { error: 'La solicitud no está aprobada o no tiene reemplazo.' } };
+    const r = await avisarReemplazo();
+    return { estado: 200, cuerpo: { enviados, fallidos, sinCorreoReemplazo: r === 'sin_correo' } };
+  }
+
+  if (evento === 'soporte') {
+    if (n.estado !== 'aprobada') return { estado: 409, cuerpo: { error: 'Solo se recuerda el soporte de permisos aprobados.' } };
+    const para = await correoDe(n.docente_id, docente?.email);
+    if (para)
+      await mandar({
+        para,
+        asunto: `Falta el soporte de su permiso · ${rad}`,
+        html: plantilla({
+          institucion: nombreInst,
+          titulo: 'Falta el soporte de su permiso',
+          aviso: { texto: 'Soporte pendiente', tono: 'info' },
+          intro: `Hola ${escapar(docente?.nombres?.split(' ')[0] ?? '')}, ${escapar(quien)}, ${escapar(cargo.toLowerCase())}, le recuerda que su permiso fue aprobado y falta adjuntar el soporte (por ejemplo, la incapacidad o el documento de la calamidad).`,
+          filas: filasBase,
+          boton: { texto: 'Subir el soporte', url: enlace },
+          nota: 'En SIGEI TIC, en Mis permisos, use el botón «Subir soporte» de esta solicitud.',
+        }),
+      });
+    return { estado: 200, cuerpo: { enviados, fallidos, sinCorreoDocente: !para } };
+  }
+
+  // Decisión
+  if (n.estado !== 'aprobada' && n.estado !== 'rechazada') return { estado: 409, cuerpo: { error: 'La solicitud aún no tiene una decisión.' } };
+  const aprobada = n.estado === 'aprobada';
   const pdf = aprobada ? certificadoValido(entrada.certificado) : null;
   const adjunto = pdf ? { nombre: `Certificado_${rad}.pdf`, base64: pdf } : undefined;
   let reemplazo = '';
@@ -332,13 +452,8 @@ export async function procesar(admin: SupabaseClient, usuarioId: string, entrada
   ];
 
   // Al docente
-  let correoDocente = String(docente?.email ?? '').trim();
-  if (!correoDocente.includes('@')) {
-    const { data: m } = await admin.from('membresias').select('perfiles!inner(email)').eq('institucion_id', n.institucion_id).eq('docente_id', n.docente_id).limit(1).maybeSingle();
-    const p = m ? ((Array.isArray(m.perfiles) ? m.perfiles[0] : m.perfiles) as { email?: string }) : null;
-    correoDocente = String(p?.email ?? '').trim();
-  }
-  if (correoDocente.includes('@'))
+  const correoDocente = await correoDe(n.docente_id, docente?.email);
+  if (correoDocente)
     await mandar({
       para: correoDocente,
       asunto: aprobada ? `Su permiso fue aprobado · ${rad}` : `Su solicitud de permiso no fue aprobada · ${rad}`,
@@ -373,7 +488,10 @@ export async function procesar(admin: SupabaseClient, usuarioId: string, entrada
       }),
     });
 
-  return { estado: 200, cuerpo: { enviados, fallidos, sinCorreoDocente: !correoDocente.includes('@') } };
+  // Al docente de reemplazo, con sus clases.
+  const r = aprobada ? await avisarReemplazo() : 'no_aplica';
+
+  return { estado: 200, cuerpo: { enviados, fallidos, sinCorreoDocente: !correoDocente, sinCorreoReemplazo: r === 'sin_correo' } };
 }
 
 if (!Deno.env.get('SIGEI_PRUEBA'))

@@ -3,7 +3,7 @@ import { AreaTexto, Boton, Campo, Modal, Selector } from '@/components/ui';
 import { ListaSoportes } from '@/components/Soportes';
 import { useAuth } from '@/hooks/useAuth';
 import { useMutar, useTabla } from '@/hooks/useDatos';
-import { conCargoRevisor, useAvisosPermiso } from '@/hooks/useAvisosPermiso';
+import { conDatosRevisor, useAvisosPermiso } from '@/hooks/useAvisosPermiso';
 import { useToast } from '@/hooks/useToast';
 import { DIAS, etiqueta, TIPOS_NOVEDAD } from '@/lib/catalogos';
 import type { BloqueHorario, Novedad } from '@/lib/types';
@@ -56,13 +56,11 @@ export function RevisionNovedad({ datos, onCerrar }: { datos: DecisionNovedad | 
         revisado_en: new Date().toISOString(),
         reemplazo_id: aprobar ? reemplazo || null : n.reemplazo_id,
       };
-      const guardada = await conCargoRevisor((conCargo) =>
-        editar.mutateAsync({ id: n.id, cambios: conCargo ? { ...cambios, revisado_rol: avisos.rolRevisor } : cambios }),
-      );
+      const guardada = await conDatosRevisor(avisos.datosRevisor, (extras) => editar.mutateAsync({ id: n.id, cambios: { ...cambios, ...extras } }));
       toast.ok(aprobar ? 'Novedad aprobada.' : 'Novedad rechazada.');
       onCerrar();
       // Correo al docente (y a los demás directivos si se aprobó), con el certificado.
-      void avisos.avisarDecision({ ...n, ...cambios, revisado_rol: avisos.rolRevisor, ...guardada });
+      void avisos.avisarDecision({ ...n, ...cambios, ...avisos.datosRevisor, ...guardada });
     } catch (e) {
       toast.error(e);
     }
