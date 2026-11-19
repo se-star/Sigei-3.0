@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Avatar, Boton, Cargando, Insignia, Progreso, Segmentos, Tarjeta, Vacio } from '@/components/ui';
 import { useAvisosPermiso } from '@/hooks/useAvisosPermiso';
+import { soportePendiente } from '@/lib/certificadoPermiso';
 import { FormDocente } from '@/components/formularios/FormDocente';
 import { HorarioSemanal } from '@/components/HorarioSemanal';
 import { ListaSoportes } from '@/components/Soportes';
@@ -974,6 +975,7 @@ function FilaNovedad({
       </div>
       <div className="flex flex-col items-end gap-2">
         <Insignia tono={tono(ESTADOS_NOVEDAD, n.estado)}>{etiqueta(ESTADOS_NOVEDAD, n.estado)}</Insignia>
+        {soportePendiente(n) && <Insignia tono="warn">Soporte pendiente</Insignia>}
         {n.estado === 'aprobada' && (
           <button
             type="button"

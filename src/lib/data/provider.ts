@@ -32,6 +32,14 @@ export interface DataProvider {
   urlSoporte(ruta: string): Promise<string>;
   borrarSoportes(rutas: string[]): Promise<void>;
 
+  /** Adjunta soportes a una novedad ya revisada (soporte pendiente). */
+  agregarSoportes(novedadId: ID, soportes: Soporte[]): Promise<void>;
+
+  /* Firma para el certificado de permisos */
+  /** Firma (PNG en data URL) de una persona; '' si no tiene. */
+  firmaDe(usuarioId: ID): Promise<string>;
+  guardarMiFirma(firma: string): Promise<void>;
+
   /* Avisos por correo de permisos (función del servidor notificar-permiso) */
   notificarPermiso(cuerpo: AvisoPermiso): Promise<ResultadoAviso>;
 
@@ -41,7 +49,8 @@ export interface DataProvider {
 }
 
 export interface AvisoPermiso {
-  evento: 'solicitud' | 'decision';
+  /** solicitud: a directivos · decision: al docente, al reemplazo y a directivos · reemplazo: solo al reemplazo · soporte: recordatorio al docente. */
+  evento: 'solicitud' | 'decision' | 'reemplazo' | 'soporte';
   novedad_id: ID;
   /** Certificado de autorización en PDF (base64), cuando se aprueba. */
   certificado?: string;
@@ -53,6 +62,7 @@ export interface ResultadoAviso {
   fallidos: string[];
   sinDestinatarios?: boolean;
   sinCorreoDocente?: boolean;
+  sinCorreoReemplazo?: boolean;
   /** En el modo demo no se envían correos. */
   demo?: boolean;
 }

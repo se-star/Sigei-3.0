@@ -64,6 +64,14 @@ export function soportePosterior(n: Pick<Novedad, 'tipo' | 'soportes'>): string 
   return 'No se exige soporte posterior.';
 }
 
+/** Tipos de permiso que piden soporte (incapacidad médica, calamidad doméstica). */
+export const TIPOS_CON_SOPORTE = ['incapacidad', 'calamidad'];
+
+/** Permiso aprobado de un tipo que pide soporte y que aún no lo tiene. */
+export function soportePendiente(n: Pick<Novedad, 'tipo' | 'estado' | 'soportes'>): boolean {
+  return n.estado === 'aprobada' && TIPOS_CON_SOPORTE.includes(n.tipo) && !n.soportes?.length;
+}
+
 export const nombreDia = (iso: string) => DIAS.find((d) => d.valor === new Date(`${iso}T12:00:00`).getDay())?.largo ?? '';
 
 /* ───────── Datos del certificado ───────── */
@@ -81,7 +89,7 @@ export interface DatosCertificado {
   reemplazo?: string;
   observacion?: string;
   solicitadoEn: string; // ISO
-  autorizadoPor: { nombre: string; cargo: string };
+  autorizadoPor: { nombre: string; cargo: string; firma?: Uint8Array | null };
   autorizadoEn: string; // ISO
   /** Textos personalizados de la institución (Configuración → Certificado). */
   plantilla?: Partial<PlantillaCertificado>;
@@ -381,6 +389,16 @@ export async function generarCertificado(lib: PDFLib, d: DatosCertificado): Prom
   linea(y, M + mitad + 24, 612 - M, TINTA, 0.9);
   const centroIzq = M + mitad / 2;
   const centroDer = M + mitad + 24 + mitad / 2;
+  // Firma de quien autorizó, sobre su línea.
+  if (d.autorizadoPor.firma?.length) {
+    try {
+      const img = await doc.embedPng(d.autorizadoPor.firma);
+      const esc = Math.min(64 / img.height, (mitad - 40) / img.width);
+      pagina.drawImage(img, { x: centroIzq - (img.width * esc) / 2, y: y + 3, width: img.width * esc, height: img.height * esc });
+    } catch {
+      /* firma no válida: se omite */
+    }
+  }
   const enCentro = (t: string, cx: number, yy: number, o: { tam?: number; bold?: boolean; c?: [number, number, number] } = {}) =>
     texto(t, cx - medir(t, o.tam ?? 10, o.bold) / 2, yy, o);
   enCentro(d.autorizadoPor.nombre, centroIzq, y - 15, { tam: 10.5 });
@@ -422,7 +440,7 @@ export function datosCertificado(a: {
   franjas: Franja[];
   tipo: string;
   reemplazo?: string;
-  revisor: { nombre: string; rol: string };
+  revisor: { nombre: string; rol: string; firma?: Uint8Array | null };
   plantilla?: Partial<PlantillaCertificado> | null;
 }): DatosCertificado {
   const { n } = a;
@@ -446,7 +464,7 @@ export function datosCertificado(a: {
     reemplazo: a.reemplazo,
     observacion: n.observacion_revision || undefined,
     solicitadoEn: n.created_at ?? n.fecha_inicio,
-    autorizadoPor: { nombre: a.revisor.nombre || n.revisado_por || '—', cargo: cargo.cargo },
+    autorizadoPor: { nombre: a.revisor.nombre || n.revisado_por || '—', cargo: cargo.cargo, firma: a.revisor.firma },
     autorizadoEn: n.revisado_en ?? new Date().toISOString(),
     plantilla: a.plantilla ?? undefined,
   };

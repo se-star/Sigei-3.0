@@ -31,6 +31,16 @@ export function useAvisosPermiso() {
         /* sin escudo */
       }
     }
+    // Firma de quien aprobó (Mi perfil → Firma), si la tiene.
+    let firma: Uint8Array | null = null;
+    if (n.revisado_por_id) {
+      try {
+        const url = await backend.datos.firmaDe(n.revisado_por_id);
+        if (url) firma = new Uint8Array(await (await fetch(url)).arrayBuffer());
+      } catch {
+        firma = null;
+      }
+    }
     const d = docentes.find((x) => x.id === n.docente_id);
     const r = n.reemplazo_id ? docentes.find((x) => x.id === n.reemplazo_id) : undefined;
     return generarCertificado(
@@ -43,7 +53,7 @@ export function useAvisosPermiso() {
         franjas: ajustes.franjas,
         tipo: etiqueta(TIPOS_NOVEDAD, n.tipo),
         reemplazo: r ? nombreDocente(r) : undefined,
-        revisor: { nombre: n.revisado_por ?? '', rol: n.revisado_rol || 'rector' },
+        revisor: { nombre: n.revisado_por ?? '', rol: n.revisado_rol || 'rector', firma },
         plantilla: ajustes.plantilla_certificado,
       }),
     );
@@ -81,6 +91,7 @@ export function useAvisosPermiso() {
           `Enviamos el aviso por correo a ${r.enviados.length === 1 ? '1 persona' : `${r.enviados.length} personas`}${aprobada ? ', con el certificado adjunto' : ''}.`,
         );
       if (r.sinCorreoDocente) toast.error('El docente no tiene correo registrado en SIGEI: descargue el certificado y entrégueselo.');
+      if (r.sinCorreoReemplazo) toast.error('El docente de reemplazo no tiene correo registrado: avísele de sus clases por otro medio.');
       if (r.fallidos.length) toast.error(`No se pudo enviar el correo a ${r.fallidos.join(', ')}. Revise la configuración del correo.`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -89,21 +100,43 @@ export function useAvisosPermiso() {
     }
   };
 
-  /** Cargo de quien revisa ahora, para guardarlo con la decisión. */
-  const rolRevisor = perfil?.rol ?? '';
+  /** Avisos sueltos: al reemplazo (cuando se asigna o cambia después de aprobar) o el recordatorio de soporte al docente. */
+  const avisoSuelto = async (evento: 'reemplazo' | 'soporte', n: Novedad) => {
+    try {
+      const r = await backend.datos.notificarPermiso({ evento, novedad_id: n.id });
+      if (r.demo) return toast.ok('En el modo demo no se envían correos.');
+      if (r.enviados.length) toast.ok(evento === 'reemplazo' ? 'Avisamos por correo al docente de reemplazo con sus clases.' : 'Enviamos el recordatorio al docente.');
+      if (r.sinCorreoReemplazo) toast.error('El docente de reemplazo no tiene correo registrado: avísele por otro medio.');
+      if (r.sinCorreoDocente) toast.error('El docente no tiene correo registrado: recuérdele por otro medio.');
+      if (r.fallidos.length) toast.error(`No se pudo enviar el correo a ${r.fallidos.join(', ')}. Revise la configuración del correo.`);
+    } catch (e) {
+      toast.error(`No se envió el correo. ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+  const avisarReemplazo = (n: Novedad) => avisoSuelto('reemplazo', n);
+  const recordarSoporte = (n: Novedad) => avisoSuelto('soporte', n);
 
-  return { descargar, avisarSolicitud, avisarDecision, rolRevisor, puedeAvisar: perfil?.rol !== 'docente' };
+  /** Cargo e identidad de quien revisa ahora, para guardarlos con la decisión. */
+  const datosRevisor = { revisado_rol: perfil?.rol ?? '', revisado_por_id: perfil?.id ?? null };
+
+  return { descargar, avisarSolicitud, avisarDecision, avisarReemplazo, recordarSoporte, datosRevisor, puedeAvisar: perfil?.rol !== 'docente' };
 }
 
 /**
  * Guarda una revisión con el cargo de quien revisa; si la base de datos aún no
  * tiene esa columna (migración 0009), guarda sin ella.
  */
-export async function conCargoRevisor<T>(guardar: (conCargo: boolean) => Promise<T>): Promise<T> {
+export async function conDatosRevisor<T>(
+  datos: { revisado_rol: string; revisado_por_id: string | null },
+  guardar: (extras: Partial<Pick<Novedad, 'revisado_rol' | 'revisado_por_id'>>) => Promise<T>,
+): Promise<T> {
   try {
-    return await guardar(true);
+    return await guardar(datos);
   } catch (e) {
-    if (e instanceof Error && /0009_permisos_correo/.test(e.message)) return guardar(false);
+    const msg = e instanceof Error ? e.message : '';
+    // Sin la migración 0010: se guarda sin quién revisó; sin la 0009, tampoco el cargo.
+    if (/0010_permisos_firma_soportes/.test(msg)) return conDatosRevisor({ ...datos, revisado_por_id: null }, (x) => guardar({ revisado_rol: x.revisado_rol }));
+    if (/0009_permisos_correo/.test(msg)) return guardar({});
     throw e;
   }
 }

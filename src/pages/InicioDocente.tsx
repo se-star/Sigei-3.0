@@ -8,6 +8,7 @@ import { useAjustes, useTabla } from '@/hooks/useDatos';
 import { DIAS, ESTADOS_NOVEDAD, etiqueta, PRIORIDADES, tono, TIPOS_EVENTO, TIPOS_NOVEDAD } from '@/lib/catalogos';
 import type { BloqueHorario } from '@/lib/types';
 import { aMinutos, cx, desdeISO, fechaCorta, fechaDia, hace, horaBonita, hoyISO, nombreGrupo, porId } from '@/lib/utils';
+import { soportePendiente } from '@/lib/certificadoPermiso';
 
 function saludo() {
   const h = new Date().getHours();
@@ -51,6 +52,7 @@ export default function InicioDocente() {
   const { data: docentes = [] } = useTabla('docentes');
   const yo = docentes.find((d) => d.id === perfil?.docente_id);
   const hojaVacia = !!yo && !(yo.formacion ?? []).length;
+  const sinSoporte = novedades.filter((n) => n.docente_id === perfil?.docente_id && soportePendiente(n));
 
   const hoy = hoyISO();
   const asg = porId(asignaturas);
@@ -115,6 +117,21 @@ export default function InicioDocente() {
           ))}
         </nav>
       </section>
+
+      {sinSoporte.length > 0 && (
+        <Link to="/novedades" className="card flex items-center gap-4 border-warn/30 p-5 transition hover:shadow-pop">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-warn-soft text-warn">
+            <Paperclip className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">
+              {sinSoporte.length === 1 ? 'Falta el soporte de un permiso' : `Falta el soporte de ${sinSoporte.length} permisos`}
+            </span>
+            <span className="block text-sm text-muted">Suba la incapacidad o el documento de la calamidad en Mis permisos.</span>
+          </span>
+          <ChevronRight className="size-5 text-muted" />
+        </Link>
+      )}
 
       {hojaVacia && (
         <Link to="/perfil#hoja-de-vida" className="card flex items-center gap-4 p-5 transition hover:shadow-pop">

@@ -258,6 +258,24 @@ export class LocalDataProvider implements DataProvider {
     for (const r of rutas) localStorage.removeItem(PREFIJO + 'archivo.' + r);
   }
 
+  async agregarSoportes(novedadId: ID, soportes: Soporte[]) {
+    const n = this.todas('novedades').find((x) => x.id === novedadId);
+    if (!n) throw new Error('No encontramos la solicitud.');
+    await this.update('novedades', novedadId, { soportes: [...(n.soportes ?? []), ...soportes] });
+  }
+
+  async firmaDe(usuarioId: ID): Promise<string> {
+    return localStorage.getItem(PREFIJO + 'firma.' + usuarioId) ?? '';
+  }
+
+  async guardarMiFirma(firma: string) {
+    const yo = leer<{ id: ID } | null>(CLAVE_SESION, null);
+    if (!yo) throw new Error('Inicie sesión de nuevo.');
+    const clave = PREFIJO + 'firma.' + yo.id;
+    if (firma) localStorage.setItem(clave, firma);
+    else localStorage.removeItem(clave);
+  }
+
   /** En el modo demo no se envían correos. */
   async notificarPermiso(_cuerpo: AvisoPermiso): Promise<ResultadoAviso> {
     await espera();

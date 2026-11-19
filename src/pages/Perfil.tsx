@@ -6,6 +6,8 @@ import { FormClave } from '@/components/formularios/FormClave';
 import { SolicitarAcceso } from '@/components/SolicitarAcceso';
 import { TarjetaContacto, TarjetaDocumentos, TarjetaExperiencia, TarjetaFormacion } from '@/components/docente/HojaDeVida';
 import { FichaDocente } from '@/components/docente/FichaDocente';
+import { TarjetaFirma } from '@/components/TarjetaFirma';
+import { puedeAprobar } from '@/lib/permisos';
 import { useAuth } from '@/hooks/useAuth';
 import { useTema, type Tema } from '@/hooks/useTema';
 import { useTabla } from '@/hooks/useDatos';
@@ -173,6 +175,7 @@ export default function Perfil() {
         <Tarjeta titulo="Apariencia" className="md:col-start-2 md:row-start-1">
           <SelectorTema tema={tema} setTema={setTema} temas={temas} />
         </Tarjeta>
+        {puedeAprobar(perfil.rol) && <TarjetaFirma className="md:col-start-2" />}
       </div>
     </>
   );

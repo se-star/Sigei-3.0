@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { FileText, ImageIcon, Paperclip, Upload, X } from 'lucide-react';
 import { Boton } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
@@ -152,5 +153,60 @@ export function SelectorSoportes({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Botón «Subir soporte» para un permiso ya aprobado que lo tiene pendiente
+ * (lo usa el docente, o un directivo en su nombre).
+ */
+export function SubirSoportePendiente({ novedadId, docenteId, onListo }: { novedadId: string; docenteId: string; onListo?: () => void }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const input = useRef<HTMLInputElement>(null);
+  const [subiendo, setSubiendo] = useState(false);
+
+  const subir = async (lista: FileList | null) => {
+    const archivos = [...(lista ?? [])];
+    if (!archivos.length) return;
+    for (const f of archivos) {
+      const error = validarSoporte(f);
+      if (error) return toast.error(error);
+    }
+    if (archivos.length > SOPORTE_MAX_ARCHIVOS) return toast.error(`Puede adjuntar hasta ${SOPORTE_MAX_ARCHIVOS} archivos.`);
+    setSubiendo(true);
+    const subidos: Soporte[] = [];
+    try {
+      for (const f of archivos) subidos.push(await backend.datos.subirSoporte(f, docenteId));
+      await backend.datos.agregarSoportes(novedadId, subidos);
+      await qc.invalidateQueries({ queryKey: ['tabla'], predicate: (q) => q.queryKey[2] === 'novedades' });
+      toast.ok(subidos.length === 1 ? 'Soporte adjuntado.' : `${subidos.length} soportes adjuntados.`);
+      onListo?.();
+    } catch (e) {
+      if (subidos.length) backend.datos.borrarSoportes(subidos.map((x) => x.ruta)).catch(() => undefined);
+      toast.error(e);
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
+  return (
+    <>
+      <Boton tam="sm" icono={<Upload className="size-3.5" />} cargando={subiendo} onClick={() => input.current?.click()}>
+        Subir soporte
+      </Boton>
+      <input
+        ref={input}
+        type="file"
+        hidden
+        multiple
+        aria-label="Elegir el soporte del permiso"
+        accept="application/pdf,image/jpeg,image/png,image/webp"
+        onChange={(e) => {
+          subir(e.target.files);
+          e.target.value = '';
+        }}
+      />
+    </>
   );
 }

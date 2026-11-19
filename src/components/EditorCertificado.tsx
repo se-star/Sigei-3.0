@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAjustes, useMutar, useTabla } from '@/hooks/useDatos';
 import { useConfirmar } from '@/hooks/useConfirmar';
 import { useToast } from '@/hooks/useToast';
+import { backend } from '@/lib/backend';
 import {
   datosCertificado,
   FILAS_CERTIFICADO,
@@ -75,6 +76,16 @@ export function EditorCertificado() {
         bytes = null;
       }
     }
+    // La firma de quien edita (Mi perfil → Firma), para ver cómo queda.
+    let firma: Uint8Array | null = null;
+    if (perfil?.id) {
+      try {
+        const url = await backend.datos.firmaDe(perfil.id);
+        if (url) firma = new Uint8Array(await (await fetch(url)).arrayBuffer());
+      } catch {
+        firma = null;
+      }
+    }
     const hoy = hoyISO();
     const n: Novedad = {
       id: 'ejemplo-0001',
@@ -102,7 +113,7 @@ export function EditorCertificado() {
         institucion: { nombre: ajustes.nombre || 'Institución educativa', municipio: ajustes.municipio, logo: bytes },
         franjas: ajustes.franjas,
         tipo: 'Calamidad doméstica',
-        revisor: { nombre: n.revisado_por!, rol: perfil?.rol === 'coordinador' ? 'coordinador' : 'rector' },
+        revisor: { nombre: n.revisado_por!, rol: perfil?.rol === 'coordinador' ? 'coordinador' : 'rector', firma },
         plantilla: p,
       }),
     );

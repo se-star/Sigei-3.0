@@ -124,6 +124,13 @@ Cuando un docente radica una solicitud de permiso, SIGEI avisa por correo a rect
 
 Cada institución puede personalizar el certificado en **Configuración → Certificado de permisos**: escudo, título, párrafo de autorización con campos automáticos (`{docente}`, `{documento}`, `{fechas}`, `{institucion}`…), datos de la tabla, una nota final, el cargo bajo la firma y el pie de página, con vista previa. Lo guarda rectoría y requiere la migración `0009_permisos_correo.sql`.
 
+**Firma, reemplazos y soportes** (requiere la migración `0010_permisos_firma_soportes.sql` y volver a pegar la función `notificar-permiso` actualizada en *Edge Functions*):
+
+- Rectores y coordinadores dibujan o suben su firma en *Mi perfil → Firma para certificados*; aparece en los certificados de los permisos que aprueban.
+- Al aprobar un permiso con reemplazo (o asignar el reemplazo después), el docente que cubre recibe un correo con las clases que debe atender: fecha, hora, grupo, asignatura y aula. El correo no incluye el motivo ni el tipo de permiso.
+- Una incapacidad o calamidad aprobada sin soporte queda como *Soporte pendiente*: el docente lo ve en su inicio y lo sube desde *Mis permisos*; los directivos la filtran y pueden enviar un recordatorio por correo.
+- *Reportes → Informe de permisos* resume por docente y por tipo (días hábiles, horas y clases afectadas) en el periodo elegido, y se descarga en Excel con el detalle de cada permiso.
+
 > En el modo demo no se envían correos, pero sí se puede descargar el certificado.
 
 > En **Authentication → URL Configuration** ponga como *Site URL* la dirección publicada (por ejemplo `https://se-star.github.io/Sigei-3.0/`) y agréguela también en *Redirect URLs*, junto con `http://localhost:5173/` si va a trabajar en local. Así funcionan los correos de confirmación y de recuperación de contraseña. Quien llega desde el enlace de recuperación ve una pantalla para crear su contraseña nueva; con sesión iniciada también se puede cambiar desde *Mi perfil*.

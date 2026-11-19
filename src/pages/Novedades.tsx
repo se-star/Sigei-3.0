@@ -1,23 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Bell, Check, Download, FileBadge, Mail, Pencil, Plus, Trash2, UserCheck, X, CalendarRange, Ban } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Bell, BellRing, Check, FileSpreadsheet, Download, FileBadge, Mail, Pencil, Plus, Trash2, UserCheck, X, CalendarRange, Ban } from 'lucide-react';
 import { AreaTexto, Avatar, Boton, Campo, Cargando, Encabezado, Entrada, Insignia, Panel, Segmentos, Selector, Vacio } from '@/components/ui';
 import { Buscador } from '@/components/ui/Buscador';
-import { ListaSoportes, SelectorSoportes } from '@/components/Soportes';
+import { ListaSoportes, SelectorSoportes, SubirSoportePendiente } from '@/components/Soportes';
 import { clasesAfectadas, RevisionNovedad, SelectorReemplazo } from '@/components/RevisionNovedad';
 import { backend } from '@/lib/backend';
 import { useAuth } from '@/hooks/useAuth';
 import { useMutar, useTabla } from '@/hooks/useDatos';
 import { useConfirmar } from '@/hooks/useConfirmar';
 import { useToast } from '@/hooks/useToast';
-import { conCargoRevisor, useAvisosPermiso } from '@/hooks/useAvisosPermiso';
+import { conDatosRevisor, useAvisosPermiso } from '@/hooks/useAvisosPermiso';
 import { ESTADOS_NOVEDAD, etiqueta, tono, TIPOS_NOVEDAD } from '@/lib/catalogos';
 import { puedeAprobar } from '@/lib/permisos';
 import type { EstadoNovedad, ID, Novedad, Nuevo, Soporte } from '@/lib/types';
 import { coincide, descargarCSV, diasEntre, fechaCorta, hoyISO, nombreDocente, porId } from '@/lib/utils';
-import { radicado } from '@/lib/certificadoPermiso';
+import { radicado, soportePendiente } from '@/lib/certificadoPermiso';
 
-type Filtro = EstadoNovedad | 'todas';
+type Filtro = EstadoNovedad | 'todas' | 'soporte';
 
 
 export default function Novedades() {
@@ -36,6 +36,7 @@ export default function Novedades() {
   const [form, setForm] = useState<{ abierto: boolean; novedad?: Novedad; docente_id?: ID }>({ abierto: false });
   const [revision, setRevision] = useState<{ n: Novedad; decision: 'aprobada' | 'rechazada' } | null>(null);
   const avisos = useAvisosPermiso();
+  const navegar = useNavigate();
   const [enviando, setEnviando] = useState('');
   const reenviar = async (n: Novedad) => {
     setEnviando(n.id);
@@ -54,10 +55,10 @@ export default function Novedades() {
   // Un docente sin rol directivo solo ve sus propias novedades.
   const visibles = (novedades ?? []).filter((n) => aprueba || n.docente_id === perfil?.docente_id);
   const filtradas = visibles
-    .filter((n) => (filtro === 'todas' || n.estado === filtro) && (!tipo || n.tipo === tipo))
+    .filter((n) => (filtro === 'todas' || (filtro === 'soporte' ? soportePendiente(n) : n.estado === filtro)) && (!tipo || n.tipo === tipo))
     .filter((n) => coincide(q, nombreDocente(docs.get(n.docente_id)), n.motivo, radicado(n)))
     .sort((a, b) => b.fecha_inicio.localeCompare(a.fecha_inicio));
-  const cuenta = (e: Filtro) => visibles.filter((n) => e === 'todas' || n.estado === e).length;
+  const cuenta = (e: Filtro) => visibles.filter((n) => e === 'todas' || (e === 'soporte' ? soportePendiente(n) : n.estado === e)).length;
 
   const anio = String(new Date().getFullYear());
   const resumen = useMemo(() => {
@@ -119,9 +120,14 @@ export default function Novedades() {
         acciones={
           <>
             {aprueba && (
-              <Boton variante="secundario" icono={<Download className="size-4" />} onClick={exportar} disabled={!filtradas.length}>
-                Exportar
-              </Boton>
+              <>
+                <Boton variante="secundario" icono={<FileSpreadsheet className="size-4" />} onClick={() => navegar('/reportes#permisos')}>
+                  Informe
+                </Boton>
+                <Boton variante="secundario" icono={<Download className="size-4" />} onClick={exportar} disabled={!filtradas.length}>
+                  Exportar
+                </Boton>
+              </>
             )}
             <Boton icono={<Plus className="size-4" />} onClick={() => setForm({ abierto: true })} disabled={!aprueba && !perfil?.docente_id}>
               {aprueba ? 'Registrar novedad' : 'Solicitar permiso'}
@@ -155,6 +161,7 @@ export default function Novedades() {
             { valor: 'aprobada', etiqueta: 'Aprobadas', cuenta: cuenta('aprobada') },
             { valor: 'rechazada', etiqueta: 'Rechazadas', cuenta: cuenta('rechazada') },
             { valor: 'todas', etiqueta: 'Todas', cuenta: cuenta('todas') },
+            ...(cuenta('soporte') || filtro === 'soporte' ? [{ valor: 'soporte' as const, etiqueta: 'Soporte pendiente', cuenta: cuenta('soporte') }] : []),
           ]}
         />
         <div className="flex flex-col gap-2 sm:flex-row xl:ml-auto">
@@ -200,6 +207,11 @@ export default function Novedades() {
                           {etiqueta(ESTADOS_NOVEDAD, n.estado)}
                         </Insignia>
                         {vigente && <Insignia tono="lime">En curso</Insignia>}
+                        {soportePendiente(n) && (
+                          <Insignia tono="warn" punto>
+                            Soporte pendiente
+                          </Insignia>
+                        )}
                       </div>
                       <p className="mt-0.5 text-sm text-ink-2">
                         <strong className="font-semibold">{etiqueta(TIPOS_NOVEDAD, n.tipo)}</strong> ·{' '}
@@ -229,6 +241,18 @@ export default function Novedades() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 md:justify-end">
+                    {soportePendiente(n) && (aprueba || n.docente_id === perfil?.docente_id) && <SubirSoportePendiente novedadId={n.id} docenteId={n.docente_id} />}
+                    {soportePendiente(n) && aprueba && (
+                      <Boton
+                        tam="icono"
+                        variante="fantasma"
+                        onClick={() => avisos.recordarSoporte(n)}
+                        aria-label="Recordar el soporte por correo"
+                        title="Recordar al docente por correo que suba el soporte"
+                      >
+                        <BellRing className="size-4" />
+                      </Boton>
+                    )}
                     {n.estado === 'aprobada' && (
                       <Boton tam="sm" variante="secundario" icono={<FileBadge className="size-3.5" />} onClick={() => avisos.descargar(n)} title={`Certificado de autorización ${radicado(n)}`}>
                         Certificado
@@ -346,8 +370,8 @@ function FormNovedad({ abierto, novedad, docente_id, onCerrar }: { abierto: bool
       // Primero se suben los archivos nuevos; si algo falla, no se guarda la solicitud a medias.
       for (const f of nuevos) subidos.push(await backend.datos.subirSoporte(f, v.docente_id));
       const conSoportes = { ...datos, soportes: [...guardados, ...subidos] };
-      const guardada = await conCargoRevisor((conCargo) => {
-        const fila = conCargo && decide ? { ...conSoportes, revisado_rol: avisos.rolRevisor } : conSoportes;
+      const guardada = await conDatosRevisor(avisos.datosRevisor, (extras) => {
+        const fila = decide ? { ...conSoportes, ...extras } : conSoportes;
         return novedad ? editar.mutateAsync({ id: novedad.id, cambios: fila }) : crear.mutateAsync(fila);
       });
       // Los soportes que se quitaron se borran del almacenamiento.
@@ -358,7 +382,10 @@ function FormNovedad({ abierto, novedad, docente_id, onCerrar }: { abierto: bool
       // Avisos por correo: la solicitud nueva a los directivos; la decisión al docente.
       const fila = { ...(novedad ?? {}), ...conSoportes, ...guardada } as Novedad;
       if (!novedad && !aprueba) void avisos.avisarSolicitud(fila);
-      else if (decide) void avisos.avisarDecision({ ...fila, revisado_rol: avisos.rolRevisor });
+      else if (decide) void avisos.avisarDecision({ ...avisos.datosRevisor, ...fila });
+      // Reemplazo nuevo o cambiado en un permiso que ya estaba aprobado: avisar al nuevo reemplazo.
+      else if (aprueba && novedad?.estado === 'aprobada' && fila.estado === 'aprobada' && fila.reemplazo_id && fila.reemplazo_id !== novedad.reemplazo_id)
+        void avisos.avisarReemplazo(fila);
     } catch (e) {
       if (subidos.length) backend.datos.borrarSoportes(subidos.map((x) => x.ruta)).catch(() => undefined);
       toast.error(e);
