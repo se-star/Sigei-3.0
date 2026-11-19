@@ -34,6 +34,12 @@ jobs:
           # Variable (no secreta) que activa el ingreso de docentes con código: ponga 1
           # en Settings → Secrets and variables → Actions → Variables cuando esté listo.
           VITE_ACCESO_DOCENTE: ${{ vars.VITE_ACCESO_DOCENTE }}
+          # Quién opera la plataforma (aparece en la política de datos y los términos).
+          # Variables no secretas en Settings → Secrets and variables → Actions → Variables.
+          VITE_OPERADOR_NOMBRE: ${{ vars.VITE_OPERADOR_NOMBRE }}
+          VITE_OPERADOR_ID: ${{ vars.VITE_OPERADOR_ID }}
+          VITE_OPERADOR_CORREO: ${{ vars.VITE_OPERADOR_CORREO }}
+          VITE_OPERADOR_CIUDAD: ${{ vars.VITE_OPERADOR_CIUDAD }}
       - uses: actions/configure-pages@v5
         with:
           # Intenta activar Pages si aún no está activo (puede requerir activarlo a mano).

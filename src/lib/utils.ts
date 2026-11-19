@@ -250,7 +250,8 @@ export function ausentesEn(novedades: Novedad[], dia: string): Novedad[] {
 
 /** Color de avatar estable a partir de un texto. */
 // Tonos tierra apagados: los avatares no compiten con el acento violeta.
-const PALETA_AVATAR = ['#665a54', '#8a7563', '#6f7d6b', '#9a6f5a', '#5d6870', '#332f2d', '#7a7268', '#866a72'];
+// Todos con contraste AA (≥ 4,5:1) frente a las iniciales en blanco.
+const PALETA_AVATAR = ['#665a54', '#7a6656', '#5f6d5b', '#875f4d', '#5d6870', '#332f2d', '#7a7268', '#866a72'];
 export function colorDe(texto: string): string {
   let h = 0;
   for (let i = 0; i < texto.length; i++) h = (h * 31 + texto.charCodeAt(i)) >>> 0;

@@ -433,12 +433,20 @@ export function Segmentos<V extends string>({
 
 /* ───────── Barra de progreso ───────── */
 
-export function Progreso({ valor, max, tono }: { valor: number; max: number; tono?: 'auto' | 'brand' }) {
+export function Progreso({ valor, max, tono, etiqueta = 'Avance' }: { valor: number; max: number; tono?: 'auto' | 'brand'; etiqueta?: string }) {
   const pct = max > 0 ? Math.min(100, (valor / max) * 100) : 0;
   const color =
     tono === 'brand' ? 'bg-brand' : valor > max ? 'bg-danger' : pct >= 85 ? 'bg-warn' : 'bg-brand';
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={valor} aria-valuemax={max}>
+    <div
+      className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3"
+      role="progressbar"
+      aria-label={etiqueta}
+      aria-valuenow={valor}
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-valuetext={`${valor} de ${max}`}
+    >
       <div className={cx('h-full rounded-full transition-all', color)} style={{ width: `${pct}%` }} />
     </div>
   );

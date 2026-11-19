@@ -6,6 +6,7 @@ import { FormClave } from '@/components/formularios/FormClave';
 import { SolicitarAcceso } from '@/components/SolicitarAcceso';
 import { TarjetaContacto, TarjetaDocumentos, TarjetaExperiencia, TarjetaFormacion } from '@/components/docente/HojaDeVida';
 import { FichaDocente } from '@/components/docente/FichaDocente';
+import { TarjetaPrivacidad } from '@/components/TarjetaPrivacidad';
 import { TarjetaFirma } from '@/components/TarjetaFirma';
 import { puedeAprobar } from '@/lib/permisos';
 import { useAuth } from '@/hooks/useAuth';
@@ -74,6 +75,7 @@ export default function Perfil() {
                 <FormClave />
               </Tarjeta>
             )}
+            <TarjetaPrivacidad />
           </div>
         }
       />
@@ -156,6 +158,7 @@ export default function Perfil() {
             <FormClave />
           </Tarjeta>
         )}
+        {perfil.institucion_id && <TarjetaPrivacidad className="md:col-start-1" />}
         {doc && (
           <section id="hoja-de-vida" className="flex scroll-mt-24 flex-col gap-4 md:col-span-2">
             <div>

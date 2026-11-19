@@ -13,6 +13,7 @@ import {
   Moon,
   Search,
   Sun,
+  ShieldCheck,
   UserRound,
   ListTodo,
   X,
@@ -340,6 +341,15 @@ function MenuUsuario({ nombre, rol, onSalir }: { nombre: string; rol: string; on
               className="flex w-full items-center gap-2.5 rounded-[20px] px-3 py-2.5 text-sm hover:bg-surface-2"
             >
               <UserRound className="size-4" /> Mi perfil
+            </button>
+            <button
+              onClick={() => {
+                setAbierto(false);
+                nav('/legal/privacidad');
+              }}
+              className="flex w-full items-center gap-2.5 rounded-[20px] px-3 py-2.5 text-sm hover:bg-surface-2"
+            >
+              <ShieldCheck className="size-4" /> Privacidad y términos
             </button>
             <button
               onClick={onSalir}

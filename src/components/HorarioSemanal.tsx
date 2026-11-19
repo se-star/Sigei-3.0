@@ -28,7 +28,7 @@ export function HorarioSemanal({
   const filas = franjas.length ? franjas : [{ inicio: '07:00', fin: '08:00' }];
 
   return (
-    <div className="scrollbar-thin overflow-x-auto">
+    <div className="scrollbar-thin overflow-x-auto" tabIndex={0} role="region" aria-label="Horario semanal (desplace horizontalmente si no se ve completo)">
       <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-1.5 text-sm">
         <thead>
           <tr>
@@ -46,7 +46,7 @@ export function HorarioSemanal({
             <tr key={f.inicio}>
               <th scope="row" className="pr-1 text-right align-top text-xs font-semibold text-muted tabular-nums">
                 <span className="block pt-2">{f.inicio}</span>
-                <span className="block font-normal opacity-70">{f.fin}</span>
+                <span className="block font-normal">{f.fin}</span>
               </th>
               {f.descanso ? (
                 <td colSpan={dias.length}>

@@ -378,7 +378,7 @@ export function FichaDocente({
           ) : (
             <>
               <div className="px-6 pt-2 pb-4">
-                <Progreso valor={horas} max={d.carga_maxima} />
+                <Progreso valor={horas} max={d.carga_maxima} etiqueta="Horas asignadas frente a la carga máxima" />
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -728,7 +728,7 @@ function Resumen({
           detalle={propio ? `de ${d.carga_maxima} h · ${datos.misAsig.length} asignaturas` : `de ${d.carga_maxima} h · ${sinProgramar > 0 ? `${sinProgramar} h sin programar` : 'todo en el horario'}`}
           onClick={() => onIr('carga')}
         >
-          <Progreso valor={datos.horas} max={d.carga_maxima} />
+          <Progreso valor={datos.horas} max={d.carga_maxima} etiqueta="Horas asignadas frente a la carga máxima" />
         </Indicador>
         <Indicador
           etiqueta="Ausencias este año"
@@ -843,13 +843,16 @@ function Resumen({
               }
             />
             {datos.misGrupos.length > 0 && (
-              <dd className="-mt-2 flex flex-wrap gap-1.5">
-                {datos.misGrupos.map((g) => (
-                  <span key={g!.id} className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium">
-                    {nombreGrupo(g, grados)}
-                  </span>
-                ))}
-              </dd>
+              <div className="-mt-2">
+                <dt className="sr-only">Grupos en los que da clase</dt>
+                <dd className="flex flex-wrap gap-1.5">
+                  {datos.misGrupos.map((g) => (
+                    <span key={g!.id} className="rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium">
+                      {nombreGrupo(g, grados)}
+                    </span>
+                  ))}
+                </dd>
+              </div>
             )}
           </dl>
         </Tarjeta>

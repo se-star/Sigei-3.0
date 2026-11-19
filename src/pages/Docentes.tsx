@@ -114,7 +114,7 @@ export default function Docentes() {
               <span className="font-semibold tabular-nums">{h} h</span>
               <span className="text-muted">de {d.carga_maxima}</span>
             </div>
-            <Progreso valor={h} max={d.carga_maxima} />
+            <Progreso valor={h} max={d.carga_maxima} etiqueta="Horas asignadas frente a la carga máxima" />
           </div>
         );
       },
@@ -326,7 +326,7 @@ export default function Docentes() {
                       {h} / {d.carga_maxima} h
                     </span>
                   </div>
-                  <Progreso valor={h} max={d.carga_maxima} />
+                  <Progreso valor={h} max={d.carga_maxima} etiqueta="Horas asignadas frente a la carga máxima" />
                 </div>
               </button>
             );

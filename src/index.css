@@ -73,9 +73,10 @@
   --line: #1e2c44;
   --line-strong: #314360;
 
-  --brand: #2f74ff;
-  --brand-hover: #4a86ff;
-  --brand-ink: #ffffff;
+  /* Azul más claro con texto marino: contraste AA en botones (5,6:1) y en texto sobre las superficies (5,1:1). */
+  --brand: #4a86ff;
+  --brand-hover: #6a9bff;
+  --brand-ink: #07101f;
   --brand-soft: #142a52;
   --brand-soft-ink: #cfe0ff;
 

@@ -316,7 +316,7 @@ export function ProgramadorClases({ inicial }: { inicial?: { docente?: ID; grupo
                     {cargaDespues} / {d.carga_maxima} h
                   </span>
                 </div>
-                <Progreso valor={cargaDespues} max={d.carga_maxima} />
+                <Progreso valor={cargaDespues} max={d.carga_maxima} etiqueta="Horas asignadas frente a la carga máxima" />
                 <p className="mt-1.5 text-xs text-muted">{programadasDoc} h ya ubicadas en el horario</p>
                 {cargaDespues > d.carga_maxima && (
                   <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-danger">
@@ -424,7 +424,7 @@ export function ProgramadorClases({ inicial }: { inicial?: { docente?: ID; grupo
                   <th scope="row" className="pr-1 text-right align-top text-xs font-semibold text-muted tabular-nums">
                     {!f.descanso && <span className="block pt-1 text-[10px] font-semibold tracking-wide text-brand uppercase">Bloque {numeroBloque(f)}</span>}
                     <span className={cx('block', f.descanso && 'pt-2')}>{f.inicio}</span>
-                    <span className="block font-normal opacity-70">{f.fin}</span>
+                    <span className="block font-normal">{f.fin}</span>
                   </th>
                   {f.descanso ? (
                     <td colSpan={dias.length}>

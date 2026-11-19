@@ -8,6 +8,9 @@ import Login from './pages/Login';
 import { FormClave } from './components/formularios/FormClave';
 import { Logo, Wordmark } from './components/layout/Logo';
 import { ShieldX } from 'lucide-react';
+import { PuertaPoliticas } from './components/PuertaPoliticas';
+import { useAjustes } from './hooks/useDatos';
+import { DOCS_LEGALES, responsableDe, type DocLegal } from './lib/legal';
 
 /** Lleva una ruta antigua a la nueva conservando la consulta (?nuevo=1&docente=…). */
 function RedirigirConsulta({ a }: { a: string }) {
@@ -15,6 +18,7 @@ function RedirigirConsulta({ a }: { a: string }) {
   return <Navigate to={a + search} replace />;
 }
 
+const Legal = lazy(() => import('./pages/Legal'));
 const Inicio = lazy(() => import('./pages/Inicio'));
 const Docentes = lazy(() => import('./pages/Docentes'));
 const DocenteDetalle = lazy(() => import('./pages/DocenteDetalle'));
@@ -51,14 +55,51 @@ function Protegida({ modulo, children }: { modulo: Modulo; children: ReactNode }
 
 export default function App() {
   const { perfil, cargando, recuperando } = useAuth();
+  const { pathname } = useLocation();
   if (cargando)
     return (
       <div className="grid min-h-dvh place-items-center">
         <Cargando texto="Iniciando SIGEI…" />
       </div>
     );
+  // Políticas y términos: públicos, con o sin sesión.
+  if (/^\/legal(\/|$)/.test(pathname)) {
+    const pedido = pathname.split('/')[2] as DocLegal;
+    const doc = DOCS_LEGALES.some((d) => d.v === pedido) ? pedido : 'privacidad';
+    return (
+      <Suspense fallback={<Cargando />}>
+        {perfil?.institucion_id ? (
+          <LegalInstitucional doc={doc} />
+        ) : (
+          <Legal
+            doc={doc}
+            responsable={null}
+            volver={{
+              texto: perfil ? 'Volver a SIGEI' : 'Ir al ingreso',
+              a: '#/',
+            }}
+          />
+        )}
+      </Suspense>
+    );
+  }
   if (!perfil) return <Login />;
   if (recuperando) return <NuevaClave />;
+  return (
+    <PuertaPoliticas>
+      <Aplicacion />
+    </PuertaPoliticas>
+  );
+}
+
+/** Las políticas muestran los datos de contacto de la institución de la persona en sesión. */
+function LegalInstitucional({ doc }: { doc: DocLegal }) {
+  const ajustes = useAjustes();
+  return <Legal doc={doc} responsable={responsableDe(ajustes)} />;
+}
+
+function Aplicacion() {
+  const perfil = useAuth().perfil!;
 
   // Sin ninguna institución activa: el superadministrador va a su panel; los demás, a pedir acceso.
   if (!perfil.activo) {

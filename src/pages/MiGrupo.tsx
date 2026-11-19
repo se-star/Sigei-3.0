@@ -103,7 +103,7 @@ function FichaGrupo({ grupo }: { grupo: Grupo }) {
             <span className="text-lg text-muted"> / {grupo.capacidad}</span>
           </p>
           <div className="mt-2">
-            <Progreso valor={grupo.estudiantes} max={grupo.capacidad} />
+            <Progreso valor={grupo.estudiantes} max={grupo.capacidad} etiqueta="Estudiantes frente a la capacidad" />
           </div>
         </div>
         <div className="card p-5">

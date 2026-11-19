@@ -174,7 +174,7 @@ export function TarjetaFirma({ className }: { className?: string }) {
         {nueva || actual ? (
           <img src={nueva || actual} alt={nueva ? 'Firma nueva sin guardar' : 'Su firma guardada'} className="max-h-full max-w-full object-contain" />
         ) : (
-          <p className="text-sm text-muted">Aún no tiene firma guardada.</p>
+          <p className="text-sm text-[#5a6272]">Aún no tiene firma guardada.</p>
         )}
       </div>
       {nueva && <p className="mb-3 text-xs font-semibold text-warn">Vista previa: pulse «Guardar firma» para usarla.</p>}
