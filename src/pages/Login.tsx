@@ -1,3 +1,4 @@
+import { Creditos } from '@/components/Creditos';
 import { useEffect, useState, type FormEvent } from 'react';
 import type { InstitucionPublica } from '@/lib/data/provider';
 import { ArrowRight, Bell, Check, Clock3, GraduationCap, Landmark, ShieldCheck, UserRound, Users } from 'lucide-react';
@@ -48,7 +49,7 @@ export default function Login() {
               Cookies
             </a>
           </nav>
-          © {new Date().getFullYear()} SIGEI TIC
+          <Creditos variante="ingreso" className="mt-4" />
           {servidorDatos && <span className="block text-center text-xs">Servidor de datos: {servidorDatos}</span>}
         </footer>
       </div>

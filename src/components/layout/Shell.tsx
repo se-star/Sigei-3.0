@@ -1,3 +1,4 @@
+import { Creditos } from '@/components/Creditos';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -129,6 +130,7 @@ export function Shell() {
         {marca(colapsado)}
         <SelectorInstitucion mini={colapsado} />
         {menu(colapsado)}
+        {!colapsado && <Creditos variante="menu" />}
         <button
           onClick={() => setColapsado(!colapsado)}
           className={cx(
@@ -157,6 +159,7 @@ export function Shell() {
             {marca(false)}
             <SelectorInstitucion />
             {menu(false)}
+            <Creditos variante="menu" className="pt-2" />
           </aside>
         </div>
       )}
