@@ -160,7 +160,9 @@ Los archivos oficiales del logo de SIGEI TIC están en `public/marca/` y se publ
 | `icono-app.svg`, `icono-app-maskable.svg` | Ícono de la app sobre azul marino |
 | `png/` | Las mismas versiones en PNG con fondo transparente |
 
-Cada versión viene en cuatro tonos: a color para fondos claros (sin sufijo), `-oscuro` para fondos azul marino, y `-blanco` y `-grafito` a una sola tinta. Los íconos de la app están en `public/icons/`, el favicon en `public/favicon.svg` y `public/favicon.ico`, y la imagen para compartir el enlace en `public/og-image.png`.
+Cada versión viene en cuatro tonos: a color para fondos claros (sin sufijo), `-oscuro` para fondos azul marino, y `-blanco` y `-grafito` a una sola tinta. La franja de aliados (Alfabetización TIC, Centro de Ciencia y Tecnología de Antioquia y Fundación Fraternidad Medellín) está en `public/aliados/`: `aliados-blanco.png` es la original para fondos oscuros y `aliados-marino.png` la misma pieza en azul marino para fondos claros. Se muestra en el ingreso, el menú lateral y las páginas legales con la leyenda de derechos definida en `src/lib/creditos.ts`.
+
+Los íconos de la app están en `public/icons/`, el favicon en `public/favicon.svg` y `public/favicon.ico`, y la imagen para compartir el enlace en `public/og-image.png`.
 
 ## Publicar en GitHub Pages
 

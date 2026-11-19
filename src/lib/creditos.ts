@@ -3,20 +3,21 @@
  * proyecto. Se muestran en el ingreso, el menú lateral y las páginas legales.
  */
 
-export interface Aliado {
-  nombre: string;
-  /** Ruta del logo dentro de public/ ('' mientras no se haya cargado el archivo oficial). */
-  logo: string;
-}
-
 export const TITULAR = 'Centro de Ciencia y Tecnología de Antioquia';
 export const PROYECTO = 'ALFATIC';
 export const FINANCIADOR = 'Fundación Fraternidad Medellín';
 export const ANIO_DERECHOS = 2026;
 
-export const ALIADOS: Aliado[] = [
-  { nombre: TITULAR, logo: '' },
-  { nombre: FINANCIADOR, logo: '' },
-];
+/**
+ * Franja oficial de logos (Alfabetización TIC, CTA y Fundación Fraternidad Medellín),
+ * en public/aliados/. La blanca es la original; la marina es la misma pieza para fondos claros.
+ */
+export const FRANJA_ALIADOS = {
+  claro: 'aliados/aliados-marino.png',
+  oscuro: 'aliados/aliados-blanco.png',
+  ancho: 650,
+  alto: 115,
+  alt: `Alfabetización TIC, ${TITULAR} (CTA) y ${FINANCIADOR}`,
+};
 
 export const DERECHOS = `Todos los derechos reservados para el ${TITULAR} en el marco del proyecto ${PROYECTO}, financiado por la ${FINANCIADOR}. ${ANIO_DERECHOS}.`;
