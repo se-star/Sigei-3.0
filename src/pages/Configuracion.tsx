@@ -33,7 +33,7 @@ export default function Configuracion() {
           { valor: 'institucion', etiqueta: 'Institución' },
           { valor: 'areas', etiqueta: 'Áreas y asignaturas' },
           { valor: 'franjas', etiqueta: 'Franjas horarias' },
-          { valor: 'rubrica', etiqueta: 'Rúbrica de seguimiento' },
+          { valor: 'rubrica', etiqueta: 'Rúbrica de evaluación' },
           { valor: 'certificado', etiqueta: 'Certificado de permisos' },
           { valor: 'respaldo', etiqueta: 'Respaldo' },
         ]}
@@ -363,7 +363,7 @@ function Rubrica() {
   useEffect(() => setLista(ajustes.criterios_seguimiento), [ajustes.criterios_seguimiento]);
   return (
     <Tarjeta titulo="Criterios de la rúbrica" className="max-w-2xl">
-      <p className="mb-4 text-sm text-muted">Cada criterio se valora de 1 (inicial) a 4 (destacado) en los seguimientos nuevos. Los registros anteriores conservan sus criterios.</p>
+      <p className="mb-4 text-sm text-muted">Cada criterio se valora de 1 (inicial) a 4 (destacado) en las evaluaciones nuevas. Los registros anteriores conservan sus criterios.</p>
       <ul className="flex flex-col gap-2">
         {lista.map((c, i) => (
           <li key={i} className="flex gap-2">

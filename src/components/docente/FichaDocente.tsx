@@ -65,7 +65,7 @@ const tonoPromedio = (p: number) => (p >= 3.5 ? 'ok' : p >= 2.5 ? 'info' : p >= 
 /**
  * Ficha del docente. La ven los directivos (con acciones de gestión) y el propio
  * docente en «Mi perfil» (`propio`): ahí llena su hoja de vida y no ve acciones
- * de gestión, notas internas ni seguimientos en borrador.
+ * de gestión, notas internas ni evaluaciones en borrador.
  */
 export function FichaDocente({
   id,
@@ -124,7 +124,7 @@ export function FichaDocente({
             asignaciones,
             horarios,
             novedades,
-            // El docente solo ve los seguimientos que ya le socializaron.
+            // El docente solo ve las evaluaciones que ya le socializaron.
             seguimientos: propio ? seguimientos.filter((x) => x.estado === 'socializado') : seguimientos,
             miembros,
           })
@@ -283,7 +283,7 @@ export function FichaDocente({
           },
           {
             valor: 'seguimiento',
-            etiqueta: 'Seguimiento',
+            etiqueta: 'Evaluación',
             cuenta: misSeg.length,
           },
           ...(propio && cuenta ? [{ valor: 'cuenta' as const, etiqueta: 'Mi cuenta' }] : []),
@@ -516,17 +516,17 @@ export function FichaDocente({
         </Tarjeta>
       </section>
 
-      {/* ───────── Seguimiento ───────── */}
+      {/* ───────── Evaluación docente ───────── */}
       <section className={seccion('seguimiento')}>
-        <TituloImpreso>Seguimiento pedagógico</TituloImpreso>
+        <TituloImpreso>Evaluación docente</TituloImpreso>
         <Tarjeta
           sinRelleno
-          titulo="Seguimiento pedagógico"
+          titulo="Evaluación docente"
           accion={
             gestiona('seguimiento') && (
-              <Link to={`/seguimiento?nuevo=1&docente=${d.id}`} className="no-print">
+              <Link to={`/evaluacion-docente?nuevo=1&docente=${d.id}`} className="no-print">
                 <Boton tam="sm" variante="secundario" icono={<Plus className="size-4" />}>
-                  Nuevo seguimiento
+                  Nueva evaluación
                 </Boton>
               </Link>
             )
@@ -534,7 +534,7 @@ export function FichaDocente({
         >
           {misSeg.length === 0 ? (
             <Vacio
-              titulo="Sin seguimientos"
+              titulo="Sin evaluaciones"
               texto={propio ? 'Aquí verá los acompañamientos que la coordinación socialice con usted.' : 'No hay registros de acompañamiento pedagógico.'}
             />
           ) : (
@@ -542,7 +542,7 @@ export function FichaDocente({
               {misSeg.length > 1 && <Tendencia seguimientos={misSeg} />}
               {misSeg[0].compromisos && (
                 <div className="mx-6 mb-4 rounded-[20px] bg-surface-2 p-4 text-sm">
-                  <p className="mb-1 font-semibold">Compromisos del último seguimiento ({fechaCorta(misSeg[0].fecha)})</p>
+                  <p className="mb-1 font-semibold">Compromisos de la última evaluación ({fechaCorta(misSeg[0].fecha)})</p>
                   <p className="whitespace-pre-line text-ink-2">{misSeg[0].compromisos}</p>
                 </div>
               )}
@@ -673,7 +673,7 @@ function Resumen({
         ir: 'novedades',
         tono: 'info',
       });
-    if (ultimo?.compromisos) alertas.push({ texto: 'Revise los compromisos de su último seguimiento.', ir: 'seguimiento', tono: 'info' });
+    if (ultimo?.compromisos) alertas.push({ texto: 'Revise los compromisos de su última evaluación.', ir: 'seguimiento', tono: 'info' });
     if (!d.telefono) alertas.push({ texto: 'Registre su teléfono de contacto.', ir: 'hoja', tono: 'info' });
   } else {
     if (datos.horas > d.carga_maxima)
@@ -702,7 +702,7 @@ function Resumen({
       });
     if (d.estado === 'activo' && datos.segDelAnio.length === 0)
       alertas.push({
-        texto: 'No ha recibido seguimiento pedagógico este año.',
+        texto: 'No ha recibido evaluación docente este año.',
         ir: 'seguimiento',
         tono: 'info',
       });
@@ -744,7 +744,7 @@ function Resumen({
           onClick={() => onIr('novedades')}
         />
         <Indicador
-          etiqueta="Seguimiento"
+          etiqueta="Evaluación"
           valor={ultimo ? `${promedio(ultimo).toFixed(1)} / 4` : '—'}
           detalle={ultimo ? `último el ${fechaCorta(ultimo.fecha)} · ${datos.segDelAnio.length} este año` : 'sin registros'}
           onClick={() => onIr('seguimiento')}
@@ -755,7 +755,7 @@ function Resumen({
         <Tarjeta titulo="Para atender" icono={<AlertTriangle className="size-4" />} className="lg:col-span-2">
           {alertas.length === 0 ? (
             <p className="flex items-center gap-2 py-2 text-sm text-ok">
-              <CheckCircle2 className="size-4" /> {propio ? 'Todo al día. No tiene pendientes.' : 'Todo en orden: carga, horario, permisos y seguimiento al día.'}
+              <CheckCircle2 className="size-4" /> {propio ? 'Todo al día. No tiene pendientes.' : 'Todo en orden: carga, horario, permisos y evaluación al día.'}
             </p>
           ) : (
             <ul className="flex flex-col gap-2 py-1">
@@ -1001,13 +1001,13 @@ function FilaNovedad({
   );
 }
 
-/** Promedio de cada seguimiento en orden cronológico, en barras de 0 a 4. */
+/** Promedio de cada evaluación en orden cronológico, en barras de 0 a 4. */
 function Tendencia({ seguimientos }: { seguimientos: Seguimiento[] }) {
   const serie = [...seguimientos].reverse().slice(-12);
   return (
     <div className="px-6 pb-4">
       <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-muted">
-        <ClipboardCheck className="size-3.5" /> Promedio por seguimiento, del más antiguo al más reciente
+        <ClipboardCheck className="size-3.5" /> Promedio por evaluación, de la más antigua a la más reciente
       </p>
       <div className="flex h-20 items-end gap-1.5" role="img" aria-label={`Promedios: ${serie.map((s) => promedio(s).toFixed(1)).join(', ')}`}>
         {serie.map((s) => {

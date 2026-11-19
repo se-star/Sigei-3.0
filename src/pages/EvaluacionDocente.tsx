@@ -20,7 +20,7 @@ const NIVELES_RUBRICA = [
 const promedio = (s: TSeg) => (s.criterios.length ? s.criterios.reduce((a, c) => a + c.valor, 0) / s.criterios.length : 0);
 const tonoPromedio = (p: number) => (p >= 3.5 ? 'ok' : p >= 2.5 ? 'info' : p >= 1.75 ? 'warn' : 'danger');
 
-export default function Seguimiento() {
+export default function EvaluacionDocente() {
   const { editar, perfil } = useAuth();
   const puede = editar('seguimiento');
   const { data: seguimientos, isLoading } = useTabla('seguimientos');
@@ -35,7 +35,7 @@ export default function Seguimiento() {
   const [form, setForm] = useState<{ abierto: boolean; seg?: TSeg; docenteId?: string }>({ abierto: false });
   const [detalle, setDetalle] = useState<TSeg | null>(null);
   const [params, setParams] = useSearchParams();
-  // Desde la ficha del docente: /seguimiento?nuevo=1&docente=ID abre el formulario con el docente elegido.
+  // Desde la ficha del docente: /evaluacion-docente?nuevo=1&docente=ID abre el formulario con el docente elegido.
   useEffect(() => {
     if (params.get('nuevo') && puede) {
       setForm({ abierto: true, docenteId: params.get('docente') ?? undefined });
@@ -62,11 +62,11 @@ export default function Seguimiento() {
   const activos = docentes.filter((d) => d.estado === 'activo').length;
 
   const borrar = async (s: TSeg) => {
-    if (!(await confirmar({ titulo: 'Eliminar seguimiento', confirmar: 'Eliminar', peligro: true }))) return;
+    if (!(await confirmar({ titulo: 'Eliminar evaluación', confirmar: 'Eliminar', peligro: true }))) return;
     try {
       await eliminar.mutateAsync(s.id);
       setDetalle(null);
-      toast.ok('Seguimiento eliminado.');
+      toast.ok('Evaluación eliminada.');
     } catch (e) {
       toast.error(e);
     }
@@ -75,12 +75,12 @@ export default function Seguimiento() {
   return (
     <>
       <Encabezado
-        titulo={puede ? 'Seguimiento pedagógico' : 'Mi seguimiento'}
-        descripcion={puede ? 'Visitas de aula y acompañamiento al equipo docente, con rúbrica de valoración.' : 'Los acompañamientos socializados con usted.'}
+        titulo={puede ? 'Evaluación docente' : 'Mi evaluación'}
+        descripcion={puede ? 'Visitas de aula, revisiones y evaluaciones de desempeño del equipo docente, con rúbrica de valoración.' : 'Las evaluaciones socializadas con usted.'}
         acciones={
           puede && (
             <Boton icono={<Plus className="size-4" />} onClick={() => setForm({ abierto: true })}>
-              Nuevo seguimiento
+              Nueva evaluación
             </Boton>
           )
         }
@@ -89,12 +89,12 @@ export default function Seguimiento() {
       {puede && (
         <div className="mb-6 grid gap-4 lg:grid-cols-3">
           <div className="card flex flex-col justify-between p-5">
-            <p className="text-sm font-semibold text-muted">Cobertura del acompañamiento</p>
+            <p className="text-sm font-semibold text-muted">Cobertura de la evaluación</p>
             <p className="mt-2 font-display text-4xl font-semibold tabular-nums">
               {acompanados}
               <span className="text-xl text-muted"> / {activos}</span>
             </p>
-            <p className="text-sm text-muted">docentes activos con al menos un seguimiento</p>
+            <p className="text-sm text-muted">docentes activos con al menos una evaluación</p>
           </div>
           <Tarjeta titulo="Promedio por criterio" className="lg:col-span-2">
             {porCriterio.length === 0 ? (
@@ -145,7 +145,7 @@ export default function Seguimiento() {
         <Cargando />
       ) : lista.length === 0 ? (
         <div className="card">
-          <Vacio icono={<UserRoundCheck className="size-6" />} titulo="Sin seguimientos registrados" texto={puede ? 'Registre la primera visita de aula o revisión de planeación.' : undefined} />
+          <Vacio icono={<UserRoundCheck className="size-6" />} titulo="Sin evaluaciones registradas" texto={puede ? 'Registre la primera visita de aula o revisión de planeación.' : undefined} />
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -300,7 +300,7 @@ function FormSeguimiento({ abierto, seg, docenteId, onCerrar }: { abierto: boole
       const datos = { ...v, grupo_id: v.grupo_id || null };
       if (seg) await editar.mutateAsync({ id: seg.id, cambios: datos });
       else await crear.mutateAsync(datos);
-      toast.ok('Seguimiento guardado.');
+      toast.ok('Evaluación guardada.');
       onCerrar();
     } catch (e) {
       toast.error(e);
@@ -315,7 +315,7 @@ function FormSeguimiento({ abierto, seg, docenteId, onCerrar }: { abierto: boole
     <Panel
       abierto={abierto}
       onCerrar={onCerrar}
-      titulo={seg ? 'Editar seguimiento' : 'Nuevo seguimiento'}
+      titulo={seg ? 'Editar evaluación' : 'Nueva evaluación'}
       pie={
         <>
           <Boton variante="secundario" onClick={onCerrar}>

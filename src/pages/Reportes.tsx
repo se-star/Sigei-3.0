@@ -131,11 +131,11 @@ export default function Reportes() {
         ),
     },
     {
-      titulo: 'Seguimiento pedagógico',
+      titulo: 'Evaluación docente',
       texto: `${seguimientos.length} registros`,
       accion: () =>
         descargarCSV(
-          'seguimiento-pedagogico',
+          'evaluacion-docente',
           ['Docente', 'Fecha', 'Tipo', 'Promedio', 'Fortalezas', 'Oportunidades', 'Compromisos', 'Estado', 'Observador'],
           seguimientos.map((s) => [
             nombreDocente(docs.get(s.docente_id)),

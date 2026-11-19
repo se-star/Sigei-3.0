@@ -34,7 +34,7 @@ export default function Perfil() {
     { v: 'system', t: 'Automático', i: Monitor },
   ];
 
-  // El docente ve su perfil como su ficha: resumen, hoja de vida, carga, horario, solicitudes y seguimiento.
+  // El docente ve su perfil como su ficha: resumen, hoja de vida, carga, horario, solicitudes y evaluación.
   if (esDocente && doc)
     return (
       <FichaDocente

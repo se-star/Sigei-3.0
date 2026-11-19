@@ -49,7 +49,7 @@ export const NAVEGACION: { grupo: string; items: ItemNav[] }[] = [
     grupo: 'Personal',
     items: [
       { ruta: '/novedades', etiqueta: 'Novedades y permisos', icono: Bell, modulo: 'novedades', descripcion: 'Ausencias y reemplazos', docente: { etiqueta: 'Mis permisos', descripcion: 'Solicitudes y su estado' } },
-      { ruta: '/seguimiento', etiqueta: 'Seguimiento pedagógico', icono: UserRoundCheck, modulo: 'seguimiento', descripcion: 'Acompañamiento de aula', docente: { etiqueta: 'Mi seguimiento', descripcion: 'Observaciones de mis clases' } },
+      { ruta: '/evaluacion-docente', etiqueta: 'Evaluación docente', icono: UserRoundCheck, modulo: 'seguimiento', descripcion: 'Desempeño y visitas de aula', docente: { etiqueta: 'Mi evaluación', descripcion: 'Resultados socializados conmigo' } },
     ],
   },
   {

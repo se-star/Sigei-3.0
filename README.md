@@ -1,6 +1,6 @@
 # SIGEI 3.0
 
-**Sistema de Gestión Educativa Institucional.** Una plataforma web para organizar el día a día de un colegio: docentes, grupos, asignación académica, horarios, novedades del personal, seguimiento pedagógico, calendario y comunicación institucional.
+**Sistema de Gestión Educativa Institucional.** Una plataforma web para organizar el día a día de un colegio: docentes, grupos, asignación académica, horarios, novedades del personal, evaluación docente, calendario y comunicación institucional.
 
 Esta versión se construyó desde cero, con modo oscuro y uso cómodo desde el celular.
 
@@ -13,12 +13,12 @@ Esta versión se construyó desde cero, con modo oscuro y uso cómodo desde el c
 | Módulo | Qué permite hacer |
 | --- | --- |
 | **Inicio** | Resumen del día: ausencias con su reemplazo, próximos eventos, comunicados, tareas, cumpleaños y carga académica por área. Cada docente ve además sus clases del día. |
-| **Docentes** | Directorio en tabla o tarjetas, filtros, exportación y hoja de vida con pestañas: carga, horario, novedades y seguimiento. |
+| **Docentes** | Directorio en tabla o tarjetas, filtros, exportación y hoja de vida con pestañas: carga, horario, novedades y evaluación. |
 | **Grados y grupos** | Grados del catálogo colombiano (Prejardín a Undécimo) que se agregan varios a la vez; grupos con nombre propuesto según el formato de cada institución (6°1, 601, 6A o 6-1), jornadas propias de cada institución, director de grupo, sede y ocupación del aula. El director de grupo tiene **Mi grupo**: horario, docentes con sus datos de contacto y plan de estudios. |
 | **Asignación académica** | Carga por docente o plan de estudios por grupo. Asigna una materia a varios grupos a la vez, avisa si se supera la carga máxima y compara las horas asignadas con las programadas. |
 | **Horarios** | Cuadrícula semanal por grupo o por docente. **Detecta choques** de docente, grupo y aula mientras se programa, propone el docente de la asignación y permite imprimir. |
 | **Novedades y permisos** | El docente radica su solicitud y la coordinación o la rectoría la aprueba o la rechaza. SIGEI calcula las clases afectadas y **ordena los posibles reemplazos por disponibilidad**. |
-| **Seguimiento pedagógico** | Visitas de aula con rúbrica de 1 a 4 (criterios configurables), fortalezas, compromisos, promedios por criterio y cobertura del acompañamiento. |
+| **Evaluación docente** | Visitas de aula con rúbrica de 1 a 4 (criterios configurables), fortalezas, compromisos, promedios por criterio y cobertura del acompañamiento. |
 | **Calendario** | Vista mensual con filtros por tipo de evento y **exportación .ics** para Google Calendar u Outlook. |
 | **Comunicados** | Avisos con prioridad, audiencia y opción de fijarlos arriba. |
 | **Tareas** | Tablero tipo kanban que se ordena arrastrando las tarjetas, con responsable, prioridad y fecha límite. |
@@ -48,7 +48,7 @@ Cada docente tiene su cuenta en SIGEI y entra con su **número de documento**: r
 - **Inicio**: próxima clase, clases del día, sus solicitudes, actividades del mes, comunicados y tareas.
 - **Mi horario**: su semana de clases, imprimible y exportable al calendario del celular (.ics).
 - **Mis permisos**: solicitudes con soportes adjuntos (PDF o foto, hasta 5 MB, privados).
-- **Actividades**, **Comunicados**, **Mi seguimiento** (lo socializado con él) y **Tareas**.
+- **Actividades**, **Comunicados**, **Mi evaluación** (lo socializado con él) y **Tareas**.
 
 ### Roles (dentro de cada institución)
 
@@ -56,7 +56,7 @@ Cada docente tiene su cuenta en SIGEI y entra con su **número de documento**: r
 | --- | --- |
 | Administrador | Todo en su institución, incluidos los usuarios y la configuración. |
 | Rectoría | Gestión institucional, aprobaciones, sedes, configuración y actividad. |
-| Coordinación | Docentes, grupos, horarios, novedades, seguimiento, calendario y comunicados. |
+| Coordinación | Docentes, grupos, horarios, novedades, evaluación docente, calendario y comunicados. |
 | Docente | Consulta, su propio horario, radicación de sus novedades y tareas. |
 
 Los permisos se aplican tanto en la interfaz (`src/lib/permisos.ts`) como en la base de datos, mediante políticas RLS de PostgreSQL. Por eso un docente no puede, por ejemplo, aprobar sus propios permisos aunque manipule la aplicación.

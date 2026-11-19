@@ -14,7 +14,7 @@ const TABLAS: Record<string, string> = {
   asignaciones: 'Asignación académica',
   horarios: 'Horarios',
   novedades: 'Novedades',
-  seguimientos: 'Seguimiento',
+  seguimientos: 'Evaluación docente',
   eventos: 'Calendario',
   comunicados: 'Comunicados',
   tareas: 'Tareas',

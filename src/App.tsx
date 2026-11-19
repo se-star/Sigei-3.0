@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Shell } from './components/layout/Shell';
 import { Cargando, Vacio } from './components/ui';
 import { useAuth } from './hooks/useAuth';
@@ -9,6 +9,12 @@ import { FormClave } from './components/formularios/FormClave';
 import { Logo, Wordmark } from './components/layout/Logo';
 import { ShieldX } from 'lucide-react';
 
+/** Lleva una ruta antigua a la nueva conservando la consulta (?nuevo=1&docente=…). */
+function RedirigirConsulta({ a }: { a: string }) {
+  const { search } = useLocation();
+  return <Navigate to={a + search} replace />;
+}
+
 const Inicio = lazy(() => import('./pages/Inicio'));
 const Docentes = lazy(() => import('./pages/Docentes'));
 const DocenteDetalle = lazy(() => import('./pages/DocenteDetalle'));
@@ -16,7 +22,7 @@ const Grupos = lazy(() => import('./pages/Grupos'));
 const Asignacion = lazy(() => import('./pages/Asignacion'));
 const Horarios = lazy(() => import('./pages/Horarios'));
 const Novedades = lazy(() => import('./pages/Novedades'));
-const Seguimiento = lazy(() => import('./pages/Seguimiento'));
+const EvaluacionDocente = lazy(() => import('./pages/EvaluacionDocente'));
 const Calendario = lazy(() => import('./pages/Calendario'));
 const Comunicados = lazy(() => import('./pages/Comunicados'));
 const Tareas = lazy(() => import('./pages/Tareas'));
@@ -89,7 +95,9 @@ export default function App() {
           <Route path="asignacion" element={r('asignacion', <Asignacion />)} />
           <Route path="horarios" element={r('horarios', <Horarios />)} />
           <Route path="novedades" element={r('novedades', <Novedades />)} />
-          <Route path="seguimiento" element={r('seguimiento', <Seguimiento />)} />
+          <Route path="evaluacion-docente" element={r('seguimiento', <EvaluacionDocente />)} />
+          {/* Ruta anterior del módulo (antes «Seguimiento pedagógico»): conserva enlaces guardados. */}
+          <Route path="seguimiento" element={<RedirigirConsulta a="/evaluacion-docente" />} />
           <Route path="calendario" element={r('calendario', <Calendario />)} />
           <Route path="comunicados" element={r('comunicados', <Comunicados />)} />
           <Route path="tareas" element={r('tareas', <Tareas />)} />
